@@ -13,7 +13,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2196F3 0%, #00BCD4 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -29,7 +29,7 @@
 
         /* Header */
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2196F3 0%, #00BCD4 100%);
             color: white;
             padding: 30px 40px;
         }
@@ -49,6 +49,7 @@
 
         .logo {
             font-size: 3em;
+            color: white;
         }
 
         .brand-info h1 {
@@ -134,7 +135,7 @@
         }
 
         .ai-icon {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #2196F3, #00BCD4);
             color: white;
             width: 45px;
             height: 45px;
@@ -163,7 +164,7 @@
             width: 30px;
             height: 30px;
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            border-top: 3px solid #2196F3;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -180,7 +181,7 @@
         }
 
         .ai-content h3 {
-            color: #667eea;
+            color: #2196F3;
             margin-top: 20px;
             margin-bottom: 10px;
             font-size: 1.1em;
@@ -233,7 +234,7 @@
             top: 0;
             bottom: 0;
             width: 3px;
-            background: linear-gradient(180deg, #667eea, #764ba2);
+            background: linear-gradient(180deg, #2196F3, #00BCD4);
         }
 
         .timeline-item {
@@ -259,9 +260,9 @@
             width: 20px;
             height: 20px;
             background: white;
-            border: 4px solid #667eea;
+            border: 4px solid #2196F3;
             border-radius: 50%;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+            box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.2);
         }
 
         .event-header {
@@ -273,7 +274,7 @@
 
         .event-type {
             display: inline-block;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #2196F3, #00BCD4);
             color: white;
             padding: 8px 16px;
             border-radius: 20px;
@@ -309,7 +310,7 @@
 
         .info-label {
             font-weight: 600;
-            color: #667eea;
+            color: #2196F3;
             min-width: 120px;
         }
 
@@ -332,8 +333,8 @@
         }
 
         .doctor-info {
-            color: #667eea;
-            border: 1px solid #667eea;
+            color: #2196F3;
+            border: 1px solid #2196F3;
         }
 
         .hospital-info {
@@ -376,7 +377,7 @@
         .document-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            border-color: #667eea;
+            border-color: #2196F3;
         }
 
         .document-icon {
@@ -445,7 +446,7 @@
         /* Quick Insights */
         .insight-item {
             background: #f8f9fa;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #2196F3;
             padding: 15px;
             margin-bottom: 12px;
             border-radius: 8px;
@@ -471,7 +472,7 @@
 
         .spinner {
             border: 6px solid #f3f3f3;
-            border-top: 6px solid #667eea;
+            border-top: 6px solid #2196F3;
             border-radius: 50%;
             width: 60px;
             height: 60px;
@@ -519,6 +520,79 @@
             }
         }
 
+        /* Document Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            position: relative;
+            margin: 2% auto;
+            max-width: 90%;
+            max-height: 90%;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #2196F3, #00BCD4);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 2em;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-body {
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .modal-image {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        .modal-loading {
+            text-align: center;
+            padding: 40px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .main-content {
@@ -544,6 +618,22 @@
             <div class="loading">
                 <div class="spinner"></div>
                 <p>Loading patient medical history...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Viewer Modal -->
+    <div id="documentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Medical Document</h3>
+                <button class="modal-close" onclick="closeDocumentModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="modal-loading">
+                    <div class="spinner"></div>
+                    <p>Loading document...</p>
+                </div>
             </div>
         </div>
     </div>
@@ -998,8 +1088,100 @@ ${JSON.stringify(medicalData, null, 2)}`,
             `;
         }
 
-        function viewDocument(docId) {
-            alert('Document viewer feature coming soon. Document ID: ' + docId);
+        async function viewDocument(docId) {
+            const modal = document.getElementById('documentModal');
+            const modalBody = document.getElementById('modalBody');
+
+            modal.style.display = 'block';
+            modalBody.innerHTML = `
+                <div class="modal-loading">
+                    <div class="spinner"></div>
+                    <p>Loading document...</p>
+                </div>
+            `;
+
+            try {
+                // Fetch document details from Supabase
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/medical_documents?id=eq.${docId}&select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch document');
+
+                const docs = await response.json();
+                if (!docs || docs.length === 0) {
+                    throw new Error('Document not found');
+                }
+
+                const doc = docs[0];
+                let content = '';
+
+                // Display document based on type
+                if (doc.file_url) {
+                    // Check if it's an image
+                    if (doc.document_type && doc.document_type.includes('image') ||
+                        doc.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                        content = `<img src="${doc.file_url}" class="modal-image" alt="Medical Document">`;
+                    } else {
+                        // PDF or other documents
+                        content = `
+                            <div style="text-align: center; padding: 40px;">
+                                <div style="font-size: 4em; margin-bottom: 20px;">📄</div>
+                                <h3>${doc.title || 'Medical Document'}</h3>
+                                <p style="color: #666; margin: 15px 0;">Document Type: ${doc.document_type || 'Unknown'}</p>
+                                <a href="${doc.file_url}" target="_blank"
+                                   style="display: inline-block; background: #2196F3; color: white; padding: 12px 24px;
+                                          border-radius: 8px; text-decoration: none; margin-top: 15px;">
+                                    Open Document
+                                </a>
+                            </div>
+                        `;
+                    }
+                } else if (doc.extracted_text) {
+                    // Show extracted text
+                    content = `
+                        <div style="padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                            <h3 style="color: #2196F3; margin-bottom: 15px;">📄 ${doc.title || 'Document Content'}</h3>
+                            <p style="white-space: pre-wrap; line-height: 1.8; color: #555;">${doc.extracted_text}</p>
+                        </div>
+                    `;
+                } else {
+                    content = `
+                        <div style="text-align: center; padding: 40px; color: #999;">
+                            <div style="font-size: 3em; margin-bottom: 15px;">📋</div>
+                            <p>No document content available</p>
+                        </div>
+                    `;
+                }
+
+                modalBody.innerHTML = content;
+
+            } catch (error) {
+                console.error('Error loading document:', error);
+                modalBody.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #E53935;">
+                        <div style="font-size: 3em; margin-bottom: 15px;">⚠️</div>
+                        <h3>Error Loading Document</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function closeDocumentModal() {
+            document.getElementById('documentModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('documentModal');
+            if (event.target === modal) {
+                closeDocumentModal();
+            }
         }
 
         // Load data on page load
