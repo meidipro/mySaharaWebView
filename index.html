@@ -889,7 +889,7 @@
                         </div>
                         <div class="documents-grid">
                             ${history.document_ids.map(id => `
-                                <div class="document-card" onclick="viewDocument('${id}')">
+                                <div class="document-card" onclick="event.preventDefault(); viewDocument('${id}'); return false;">
                                     <div class="document-icon">📄</div>
                                     <div class="document-type">Medical Document</div>
                                 </div>
@@ -1046,10 +1046,11 @@ ${JSON.stringify(medicalData, null, 2)}`,
 
             } catch (error) {
                 console.error('AI Summary Error:', error);
+                // Show manual summary instead
                 summaryDiv.innerHTML = `
                     <div class="ai-content">
-                        <p style="color: #999;">
-                            AI summary is currently unavailable. Please review the detailed medical timeline below.
+                        <p style="color: #666; margin-bottom: 20px; padding: 12px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                            ℹ️ AI-powered summary is currently unavailable. Here's an automated summary based on your medical records:
                         </p>
                         ${createManualSummary(histories)}
                     </div>
