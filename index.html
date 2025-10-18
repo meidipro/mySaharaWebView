@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>mySahara - Shared Medical History</title>
+    <title>Patient Medical History - mySahara Health</title>
     <style>
         * {
             margin: 0;
@@ -12,58 +12,160 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             padding: 20px;
         }
 
         .container {
-            background: white;
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #f8f9fa;
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 800px;
-            width: 100%;
-            padding: 40px;
+            overflow: hidden;
         }
 
+        /* Header */
         .header {
-            text-align: center;
-            margin-bottom: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 40px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
         .logo {
-            font-size: 2.5em;
-            color: #667eea;
-            margin-bottom: 10px;
+            font-size: 3em;
         }
 
-        h1 {
+        .brand-info h1 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .brand-info p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+
+        .expiry-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 12px 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+
+        .timer-icon {
+            font-size: 1.5em;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+            padding: 30px 40px;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* AI Summary Section */
+        .ai-summary {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
+        }
+
+        .ai-summary-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .ai-icon {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+        }
+
+        .ai-summary-header h2 {
             color: #333;
-            margin-bottom: 10px;
+            font-size: 1.4em;
         }
 
-        .subtitle {
-            color: #666;
-            font-size: 0.9em;
+        .ai-loading {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
         }
 
-        .loading {
-            text-align: center;
-            padding: 40px;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+        .ai-spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
         }
 
         @keyframes spin {
@@ -71,139 +173,405 @@
             100% { transform: rotate(360deg); }
         }
 
-        .error {
-            background: #fee;
-            border: 1px solid #fcc;
-            border-radius: 10px;
-            padding: 20px;
-            color: #c33;
-            text-align: center;
+        .ai-content {
+            color: #555;
+            line-height: 1.8;
+            font-size: 0.95em;
         }
 
-        .error-icon {
-            font-size: 3em;
-            margin-bottom: 10px;
-        }
-
-        .history-list {
+        .ai-content h3 {
+            color: #667eea;
             margin-top: 20px;
-        }
-
-        .history-item {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 15px;
-            border-left: 4px solid #667eea;
-        }
-
-        .history-header {
-            display: flex;
-            justify-content: space-between;
             margin-bottom: 10px;
-        }
-
-        .history-title {
-            font-weight: 600;
-            color: #333;
             font-size: 1.1em;
         }
 
-        .history-date {
-            color: #999;
-            font-size: 0.9em;
+        .ai-content ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
         }
 
-        .history-description {
-            color: #666;
-            line-height: 1.6;
-            margin-top: 10px;
+        .ai-content li {
+            margin-bottom: 8px;
         }
 
-        .tag {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            margin-right: 5px;
-            margin-top: 10px;
-        }
-
-        .expired-notice {
+        .key-findings {
             background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 10px;
+            border-left: 4px solid #ffc107;
             padding: 15px;
-            color: #856404;
-            margin-bottom: 20px;
-            text-align: center;
+            margin: 20px 0;
+            border-radius: 8px;
         }
 
-        .footer {
-            margin-top: 30px;
+        .recommendations {
+            background: #d1ecf1;
+            border-left: 4px solid #0c5460;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        /* Timeline */
+        .timeline-section h2 {
+            color: #333;
+            margin-bottom: 25px;
+            font-size: 1.6em;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #667eea, #764ba2);
+        }
+
+        .timeline-item {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            position: relative;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .timeline-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -52px;
+            top: 25px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border: 4px solid #667eea;
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+        }
+
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .event-type {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .event-date {
+            color: #999;
+            font-size: 0.95em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .event-title {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .info-grid {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #667eea;
+            min-width: 120px;
+        }
+
+        .info-value {
+            color: #555;
+            flex: 1;
+            line-height: 1.6;
+        }
+
+        .doctor-info, .hospital-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-right: 10px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .doctor-info {
+            color: #667eea;
+            border: 1px solid #667eea;
+        }
+
+        .hospital-info {
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        /* Documents Section */
+        .documents-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px dashed #e0e0e0;
+        }
+
+        .documents-header {
+            font-size: 1em;
+            color: #666;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .documents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 12px;
+        }
+
+        .document-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 12px;
             text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .document-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .document-icon {
+            font-size: 2.5em;
+            margin-bottom: 8px;
+        }
+
+        .document-type {
+            font-size: 0.8em;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .document-image {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sidebar-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-card h3 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2em;
+        }
+
+        .patient-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .patient-info-item:last-child {
+            border-bottom: none;
+        }
+
+        .patient-info-label {
             color: #999;
             font-size: 0.9em;
         }
 
-        .success-icon {
-            font-size: 3em;
-            color: #4CAF50;
-            margin-bottom: 10px;
+        .patient-info-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        /* Quick Insights */
+        .insight-item {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+        }
+
+        .insight-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 0.95em;
+        }
+
+        .insight-value {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        /* Loading State */
+        .loading {
             text-align: center;
+            padding: 60px 20px;
+        }
+
+        .spinner {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #667eea;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        /* Error State */
+        .error {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin: 40px;
+        }
+
+        .error-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+
+        .error h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 1.5em;
+        }
+
+        .error p {
+            color: #856404;
+        }
+
+        /* Print Styles */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+            }
+            .expiry-badge, .ai-summary {
+                page-break-inside: avoid;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 20px;
+            }
+            .header {
+                padding: 20px;
+            }
+            .header-top {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            .timeline {
+                padding-left: 30px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <div class="logo">🏥</div>
-            <h1>mySahara Health</h1>
-            <p class="subtitle">Secure Medical History Sharing</p>
-        </div>
-
         <div id="content">
             <div class="loading">
                 <div class="spinner"></div>
-                <p>Loading medical history...</p>
+                <p>Loading patient medical history...</p>
             </div>
-        </div>
-
-        <div class="footer">
-            <p>🔒 This link is temporary and will expire in 10 minutes</p>
-            <p style="margin-top: 5px;">© 2025 mySahara Health - Secure & Private</p>
         </div>
     </div>
 
     <script>
+        // Configuration
+        const SUPABASE_URL = 'https://fbnliqznxpdjhesctbmy.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZibmxpcXpueHBkamhlc2N0Ym15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxOTQ1NzYsImV4cCI6MjA3NTc3MDU3Nn0.PBxXxHBsYaUqXB9yw_7WyLKTnMGRJ7PO_LiMa92z3bw';
+        const BACKEND_URL = 'https://mysahara.onrender.com';
+
         // Get share code from URL
         const urlParams = new URLSearchParams(window.location.search);
         const shareCode = urlParams.get('code');
 
-        // Supabase configuration - UPDATE THESE WITH YOUR VALUES
-        const SUPABASE_URL = 'https://fbnliqznxpdjhesctbmy.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZibmxpcXpueHBkamhlc2N0Ym15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxOTQ1NzYsImV4cCI6MjA3NTc3MDU3Nn0.PBxXxHBsYaUqXB9yw_7WyLKTnMGRJ7PO_LiMa92z3bw';
+        let histories = [];
 
         async function loadMedicalHistory() {
             const contentDiv = document.getElementById('content');
 
             if (!shareCode) {
-                contentDiv.innerHTML = `
-                    <div class="error">
-                        <div class="error-icon">⚠️</div>
-                        <h3>Invalid Link</h3>
-                        <p>No share code provided in the URL.</p>
-                    </div>
-                `;
+                showError('Invalid Link', 'No share code provided in the URL.');
                 return;
             }
 
             try {
                 console.log('Fetching share data for code:', shareCode);
 
-                // Fetch share data
+                // Fetch share session
                 const shareResponse = await fetch(`${SUPABASE_URL}/rest/v1/shared_medical_history?share_code=eq.${shareCode}&select=*`, {
                     headers: {
                         'apikey': SUPABASE_ANON_KEY,
@@ -212,68 +580,35 @@
                     }
                 });
 
-                console.log('Share response status:', shareResponse.status);
-
                 if (!shareResponse.ok) {
-                    const errorText = await shareResponse.text();
-                    console.error('Share fetch error:', errorText);
-                    throw new Error(`Failed to fetch share data: ${shareResponse.status}`);
+                    throw new Error('Failed to fetch share data');
                 }
 
                 const shareData = await shareResponse.json();
-                console.log('Share data:', shareData);
 
                 if (!shareData || shareData.length === 0) {
-                    contentDiv.innerHTML = `
-                        <div class="error">
-                            <div class="error-icon">🔍</div>
-                            <h3>Share Not Found</h3>
-                            <p>This link may have expired or is invalid.</p>
-                            <p style="margin-top: 10px; font-size: 0.8em; color: #999;">Code: ${shareCode}</p>
-                        </div>
-                    `;
+                    showError('Share Not Found', 'This link may have expired or is invalid.');
                     return;
                 }
 
                 const share = shareData[0];
 
-                // Check if expired
+                // Check expiration
                 const expiresAt = new Date(share.expires_at);
                 const now = new Date();
 
-                console.log('Expires at:', expiresAt);
-                console.log('Now:', now);
-                console.log('Is expired:', expiresAt < now);
-
                 if (expiresAt < now) {
-                    contentDiv.innerHTML = `
-                        <div class="error">
-                            <div class="error-icon">⏰</div>
-                            <h3>Link Expired</h3>
-                            <p>This share link has expired. Please request a new one from the patient.</p>
-                            <p style="margin-top: 10px; font-size: 0.9em;">Expired at: ${expiresAt.toLocaleString()}</p>
-                        </div>
-                    `;
+                    showError('Link Expired', `This share link expired at ${expiresAt.toLocaleString()}. Please request a new one.`);
                     return;
                 }
 
                 // Fetch medical histories
-                console.log('Medical history IDs:', share.medical_history_ids);
-
                 if (!share.medical_history_ids || share.medical_history_ids.length === 0) {
-                    contentDiv.innerHTML = `
-                        <div class="error">
-                            <div class="error-icon">📋</div>
-                            <h3>No Medical Records</h3>
-                            <p>This share session has no medical records associated with it.</p>
-                        </div>
-                    `;
+                    showError('No Medical Records', 'This share session has no medical records.');
                     return;
                 }
 
                 const historyIds = share.medical_history_ids.join(',');
-                console.log('Fetching histories with IDs:', historyIds);
-
                 const historyResponse = await fetch(`${SUPABASE_URL}/rest/v1/medical_history?id=in.(${historyIds})&select=*&order=event_date.desc`, {
                     headers: {
                         'apikey': SUPABASE_ANON_KEY,
@@ -282,66 +617,392 @@
                     }
                 });
 
-                console.log('History response status:', historyResponse.status);
-
                 if (!historyResponse.ok) {
-                    const errorText = await historyResponse.text();
-                    console.error('History fetch error:', errorText);
-                    throw new Error(`Failed to fetch medical history: ${historyResponse.status}`);
+                    throw new Error('Failed to fetch medical history');
                 }
 
-                const histories = await historyResponse.json();
+                histories = await historyResponse.json();
                 console.log('Fetched histories:', histories);
 
-                // Display medical histories
-                const timeRemaining = Math.round((expiresAt - now) / 60000);
-                let html = `
-                    <div class="success-icon">✅</div>
-                    <div class="expired-notice">
-                        ⏰ This link expires in ${timeRemaining} minute${timeRemaining !== 1 ? 's' : ''}
-                    </div>
-                    <h2 style="margin-bottom: 20px; color: #333;">Shared Medical Records (${histories.length})</h2>
-                    <div class="history-list">
-                `;
+                // Display content
+                displayContent(share, histories, expiresAt, now);
 
-                if (histories.length === 0) {
-                    html += '<p style="text-align: center; color: #999;">No medical records found.</p>';
-                } else {
-                    histories.forEach(history => {
-                        const eventDate = new Date(history.event_date).toLocaleDateString();
-                        html += `
-                            <div class="history-item">
-                                <div class="history-header">
-                                    <div class="history-title">${history.event_type || 'Medical Event'}</div>
-                                    <div class="history-date">📅 ${eventDate}</div>
-                                </div>
-                                ${history.diagnosis ? `<div class="history-description"><strong>Diagnosis:</strong> ${history.diagnosis}</div>` : ''}
-                                ${history.treatment ? `<div class="history-description"><strong>Treatment:</strong> ${history.treatment}</div>` : ''}
-                                ${history.notes ? `<div class="history-description"><strong>Notes:</strong> ${history.notes}</div>` : ''}
-                                ${history.doctor_name ? `<span class="tag">👨‍⚕️ Dr. ${history.doctor_name}</span>` : ''}
-                                ${history.hospital_name ? `<span class="tag">🏥 ${history.hospital_name}</span>` : ''}
-                            </div>
-                        `;
-                    });
-                }
-
-                html += '</div>';
-                contentDiv.innerHTML = html;
+                // Generate AI summary
+                generateAISummary(histories);
 
             } catch (error) {
                 console.error('Error:', error);
-                contentDiv.innerHTML = `
-                    <div class="error">
-                        <div class="error-icon">❌</div>
-                        <h3>Error Loading Data</h3>
-                        <p>Failed to load medical history. Please try again or contact support.</p>
-                        <p style="margin-top: 10px; font-size: 0.8em; color: #999;">${error.message}</p>
+                showError('Error Loading Data', error.message);
+            }
+        }
+
+        function displayContent(share, histories, expiresAt, now) {
+            const timeRemaining = Math.round((expiresAt - now) / 60000);
+            const totalEvents = histories.length;
+
+            const uniqueDoctors = [...new Set(histories.filter(h => h.doctor_name).map(h => h.doctor_name))].length;
+            const uniqueHospitals = [...new Set(histories.filter(h => h.hospital_name).map(h => h.hospital_name))].length;
+
+            let html = `
+                <div class="header">
+                    <div class="header-top">
+                        <div class="logo-section">
+                            <div class="logo">🏥</div>
+                            <div class="brand-info">
+                                <h1>mySahara Health</h1>
+                                <p>Comprehensive Medical History Report</p>
+                            </div>
+                        </div>
+                        <div class="expiry-badge">
+                            <span class="timer-icon">⏰</span>
+                            <div>
+                                <div style="font-weight: 600;">Access Expires In</div>
+                                <div style="font-size: 1.2em; font-weight: bold;">${timeRemaining} minutes</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Medical Events</div>
+                            <div class="stat-value">${totalEvents}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Healthcare Providers</div>
+                            <div class="stat-value">${uniqueDoctors}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Facilities Visited</div>
+                            <div class="stat-value">${uniqueHospitals}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Time Period</div>
+                            <div class="stat-value">${getTimePeriod(histories)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="main-content">
+                    <div>
+                        <!-- AI Summary -->
+                        <div class="ai-summary">
+                            <div class="ai-summary-header">
+                                <div class="ai-icon">🤖</div>
+                                <h2>AI-Generated Medical Summary</h2>
+                            </div>
+                            <div id="ai-summary-content">
+                                <div class="ai-loading">
+                                    <div class="ai-spinner"></div>
+                                    <div>Analyzing medical history and generating comprehensive summary...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Timeline -->
+                        <div class="timeline-section">
+                            <h2>📋 Medical Timeline</h2>
+                            <div class="timeline">
+                                ${histories.map((h, i) => createTimelineItem(h, i)).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sidebar">
+                        ${createQuickInsights(histories)}
+                        ${createPatientInfo(histories)}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('content').innerHTML = html;
+        }
+
+        function createTimelineItem(history, index) {
+            const date = history.event_date ? new Date(history.event_date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }) : 'Date not specified';
+
+            return `
+                <div class="timeline-item">
+                    <div class="event-header">
+                        <span class="event-type">${history.event_type || 'Medical Event'}</span>
+                        <span class="event-date">📅 ${date}</span>
+                    </div>
+
+                    ${history.diagnosis ? `<div class="event-title">${history.diagnosis}</div>` : ''}
+
+                    <div class="info-grid">
+                        ${history.diagnosis ? `
+                        <div class="info-row">
+                            <div class="info-label">Diagnosis:</div>
+                            <div class="info-value">${history.diagnosis}</div>
+                        </div>
+                        ` : ''}
+
+                        ${history.treatment ? `
+                        <div class="info-row">
+                            <div class="info-label">Treatment:</div>
+                            <div class="info-value">${history.treatment}</div>
+                        </div>
+                        ` : ''}
+
+                        ${history.medications ? `
+                        <div class="info-row">
+                            <div class="info-label">Medications:</div>
+                            <div class="info-value">${history.medications}</div>
+                        </div>
+                        ` : ''}
+
+                        ${history.symptoms ? `
+                        <div class="info-row">
+                            <div class="info-label">Symptoms:</div>
+                            <div class="info-value">${history.symptoms}</div>
+                        </div>
+                        ` : ''}
+
+                        ${history.test_results ? `
+                        <div class="info-row">
+                            <div class="info-label">Test Results:</div>
+                            <div class="info-value">${history.test_results}</div>
+                        </div>
+                        ` : ''}
+
+                        ${history.notes ? `
+                        <div class="info-row">
+                            <div class="info-label">Notes:</div>
+                            <div class="info-value">${history.notes}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <div>
+                        ${history.doctor_name ? `
+                        <span class="doctor-info">
+                            👨‍⚕️ Dr. ${history.doctor_name}
+                            ${history.doctor_specialty ? ` (${history.doctor_specialty})` : ''}
+                        </span>
+                        ` : ''}
+
+                        ${history.hospital_name ? `
+                        <span class="hospital-info">
+                            🏥 ${history.hospital_name}
+                            ${history.hospital_address ? ` - ${history.hospital_address}` : ''}
+                        </span>
+                        ` : ''}
+                    </div>
+
+                    ${history.document_ids && history.document_ids.length > 0 ? `
+                    <div class="documents-section">
+                        <div class="documents-header">
+                            📎 ${history.document_ids.length} Attached Document${history.document_ids.length > 1 ? 's' : ''}
+                        </div>
+                        <div class="documents-grid">
+                            ${history.document_ids.map(id => `
+                                <div class="document-card" onclick="viewDocument('${id}')">
+                                    <div class="document-icon">📄</div>
+                                    <div class="document-type">Medical Document</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function createQuickInsights(histories) {
+            const conditions = [...new Set(histories.filter(h => h.diagnosis).map(h => h.diagnosis))];
+            const medications = [...new Set(histories.filter(h => h.medications).map(h => h.medications))];
+
+            return `
+                <div class="sidebar-card">
+                    <h3>💡 Quick Insights</h3>
+                    ${conditions.length > 0 ? `
+                    <div class="insight-item">
+                        <div class="insight-title">Diagnosed Conditions</div>
+                        <div class="insight-value">${conditions.join(', ')}</div>
+                    </div>
+                    ` : ''}
+
+                    ${medications.length > 0 ? `
+                    <div class="insight-item">
+                        <div class="insight-title">Medications</div>
+                        <div class="insight-value">${medications.slice(0, 3).join(', ')}</div>
+                    </div>
+                    ` : ''}
+
+                    <div class="insight-item">
+                        <div class="insight-title">Latest Visit</div>
+                        <div class="insight-value">${new Date(histories[0].event_date).toLocaleDateString()}</div>
+                    </div>
+
+                    <div class="insight-item">
+                        <div class="insight-title">Record Period</div>
+                        <div class="insight-value">${getTimePeriod(histories)}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createPatientInfo(histories) {
+            const totalEvents = histories.length;
+            const doctors = [...new Set(histories.filter(h => h.doctor_name).map(h => h.doctor_name))];
+
+            return `
+                <div class="sidebar-card">
+                    <h3>ℹ️ Record Information</h3>
+                    <div class="patient-info-item">
+                        <span class="patient-info-label">Total Events</span>
+                        <span class="patient-info-value">${totalEvents}</span>
+                    </div>
+                    <div class="patient-info-item">
+                        <span class="patient-info-label">Healthcare Providers</span>
+                        <span class="patient-info-value">${doctors.length}</span>
+                    </div>
+                    <div class="patient-info-item">
+                        <span class="patient-info-label">Shared On</span>
+                        <span class="patient-info-value">${new Date().toLocaleDateString()}</span>
+                    </div>
+                    <div class="patient-info-item">
+                        <span class="patient-info-label">Access Level</span>
+                        <span class="patient-info-value">Read-Only</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTimePeriod(histories) {
+            if (histories.length === 0) return 'N/A';
+
+            const dates = histories.map(h => new Date(h.event_date)).filter(d => !isNaN(d));
+            if (dates.length === 0) return 'N/A';
+
+            const oldest = new Date(Math.min(...dates));
+            const newest = new Date(Math.max(...dates));
+
+            const months = Math.round((newest - oldest) / (1000 * 60 * 60 * 24 * 30));
+            return months === 0 ? 'Recent' : `${months} months`;
+        }
+
+        async function generateAISummary(histories) {
+            const summaryDiv = document.getElementById('ai-summary-content');
+
+            try {
+                // Prepare medical history data for AI
+                const medicalData = histories.map(h => ({
+                    date: h.event_date,
+                    type: h.event_type,
+                    diagnosis: h.diagnosis,
+                    treatment: h.treatment,
+                    medications: h.medications,
+                    symptoms: h.symptoms,
+                    doctor: h.doctor_name
+                }));
+
+                console.log('Sending to AI:', medicalData);
+
+                // Call backend AI endpoint
+                const response = await fetch(`${BACKEND_URL}/api/ai/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: `Please analyze this patient's medical history and provide:
+1. A brief overview of their health journey
+2. Key findings and patterns
+3. Current health status
+4. Recommendations for the treating physician
+
+Medical History:
+${JSON.stringify(medicalData, null, 2)}`,
+                        language: 'en',
+                        use_medical_mode: true
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('AI service unavailable');
+                }
+
+                const aiResult = await response.json();
+                console.log('AI response:', aiResult);
+
+                if (aiResult.success && aiResult.message) {
+                    summaryDiv.innerHTML = `
+                        <div class="ai-content">
+                            ${formatAISummary(aiResult.message)}
+                            <p style="margin-top: 20px; font-size: 0.85em; color: #999; font-style: italic;">
+                                ⚠️ This AI-generated summary is for informational purposes only. Please review the complete medical records below.
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    throw new Error('Invalid AI response');
+                }
+
+            } catch (error) {
+                console.error('AI Summary Error:', error);
+                summaryDiv.innerHTML = `
+                    <div class="ai-content">
+                        <p style="color: #999;">
+                            AI summary is currently unavailable. Please review the detailed medical timeline below.
+                        </p>
+                        ${createManualSummary(histories)}
                     </div>
                 `;
             }
         }
 
-        // Load data when page loads
+        function formatAISummary(text) {
+            // Convert markdown-style text to HTML
+            let formatted = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+
+            return `<p>${formatted}</p>`;
+        }
+
+        function createManualSummary(histories) {
+            const conditions = [...new Set(histories.filter(h => h.diagnosis).map(h => h.diagnosis))];
+            const treatments = [...new Set(histories.filter(h => h.treatment).map(h => h.treatment))];
+
+            return `
+                <div class="key-findings">
+                    <h3>📊 Key Findings</h3>
+                    <ul>
+                        <li><strong>Total Medical Events:</strong> ${histories.length}</li>
+                        <li><strong>Conditions Diagnosed:</strong> ${conditions.join(', ') || 'None specified'}</li>
+                        <li><strong>Latest Event:</strong> ${new Date(histories[0].event_date).toLocaleDateString()}</li>
+                    </ul>
+                </div>
+
+                <div class="recommendations">
+                    <h3>💊 Treatments Administered</h3>
+                    <ul>
+                        ${treatments.slice(0, 3).map(t => `<li>${t}</li>`).join('') || '<li>No treatments specified</li>'}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function showError(title, message) {
+            document.getElementById('content').innerHTML = `
+                <div class="error">
+                    <div class="error-icon">⚠️</div>
+                    <h3>${title}</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        function viewDocument(docId) {
+            alert('Document viewer feature coming soon. Document ID: ' + docId);
+        }
+
+        // Load data on page load
         loadMedicalHistory();
     </script>
 </body>
