@@ -201,19 +201,27 @@
             }
 
             try {
+                console.log('Fetching share data for code:', shareCode);
+
                 // Fetch share data
                 const shareResponse = await fetch(`${SUPABASE_URL}/rest/v1/shared_medical_history?share_code=eq.${shareCode}&select=*`, {
                     headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
                     }
                 });
 
+                console.log('Share response status:', shareResponse.status);
+
                 if (!shareResponse.ok) {
-                    throw new Error('Failed to fetch share data');
+                    const errorText = await shareResponse.text();
+                    console.error('Share fetch error:', errorText);
+                    throw new Error(`Failed to fetch share data: ${shareResponse.status}`);
                 }
 
                 const shareData = await shareResponse.json();
+                console.log('Share data:', shareData);
 
                 if (!shareData || shareData.length === 0) {
                     contentDiv.innerHTML = `
@@ -221,6 +229,7 @@
                             <div class="error-icon">🔍</div>
                             <h3>Share Not Found</h3>
                             <p>This link may have expired or is invalid.</p>
+                            <p style="margin-top: 10px; font-size: 0.8em; color: #999;">Code: ${shareCode}</p>
                         </div>
                     `;
                     return;
@@ -231,6 +240,10 @@
                 // Check if expired
                 const expiresAt = new Date(share.expires_at);
                 const now = new Date();
+
+                console.log('Expires at:', expiresAt);
+                console.log('Now:', now);
+                console.log('Is expired:', expiresAt < now);
 
                 if (expiresAt < now) {
                     contentDiv.innerHTML = `
@@ -245,19 +258,40 @@
                 }
 
                 // Fetch medical histories
+                console.log('Medical history IDs:', share.medical_history_ids);
+
+                if (!share.medical_history_ids || share.medical_history_ids.length === 0) {
+                    contentDiv.innerHTML = `
+                        <div class="error">
+                            <div class="error-icon">📋</div>
+                            <h3>No Medical Records</h3>
+                            <p>This share session has no medical records associated with it.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
                 const historyIds = share.medical_history_ids.join(',');
+                console.log('Fetching histories with IDs:', historyIds);
+
                 const historyResponse = await fetch(`${SUPABASE_URL}/rest/v1/medical_history?id=in.(${historyIds})&select=*&order=event_date.desc`, {
                     headers: {
                         'apikey': SUPABASE_ANON_KEY,
-                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
                     }
                 });
 
+                console.log('History response status:', historyResponse.status);
+
                 if (!historyResponse.ok) {
-                    throw new Error('Failed to fetch medical history');
+                    const errorText = await historyResponse.text();
+                    console.error('History fetch error:', errorText);
+                    throw new Error(`Failed to fetch medical history: ${historyResponse.status}`);
                 }
 
                 const histories = await historyResponse.json();
+                console.log('Fetched histories:', histories);
 
                 // Display medical histories
                 const timeRemaining = Math.round((expiresAt - now) / 60000);

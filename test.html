@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test QR Code Sharing - mySahara</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        h2 {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        input, button {
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .step {
+            margin: 15px 0;
+            padding: 15px;
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-card">
+        <h1>🧪 QR Code Sharing Test Tool</h1>
+        <p>Use this tool to test your QR code sharing feature and debug issues.</p>
+    </div>
+
+    <div class="test-card">
+        <h2>Step 1: Test Supabase Connection</h2>
+        <button onclick="testConnection()">Test Connection</button>
+        <div id="connection-result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>Step 2: Enter Share Code</h2>
+        <input type="text" id="shareCode" placeholder="Enter 8-character share code (e.g., ABC12345)" maxlength="8">
+        <button onclick="testShareCode()">Test Share Code</button>
+        <div id="share-result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>Step 3: Fetch Medical Histories</h2>
+        <button onclick="testMedicalHistories()">Fetch Medical Histories</button>
+        <div id="history-result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-card">
+        <h2>Step 4: Test RLS Policies</h2>
+        <button onclick="testRLSPolicies()">Test RLS Policies</button>
+        <div id="rls-result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://fbnliqznxpdjhesctbmy.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZibmxpcXpueHBkamhlc2N0Ym15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxOTQ1NzYsImV4cCI6MjA3NTc3MDU3Nn0.PBxXxHBsYaUqXB9yw_7WyLKTnMGRJ7PO_LiMa92z3bw';
+
+        let currentShare = null;
+
+        async function testConnection() {
+            const resultDiv = document.getElementById('connection-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Testing connection to Supabase...';
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ SUCCESS!\n\nConnection to Supabase established.\nStatus: ${response.status}\nAPI Key: Valid`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ FAILED\n\nStatus: ${response.status}\nCheck your Supabase credentials.`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ ERROR\n\n${error.message}\n\nCheck your internet connection.`;
+            }
+        }
+
+        async function testShareCode() {
+            const shareCode = document.getElementById('shareCode').value.trim().toUpperCase();
+            const resultDiv = document.getElementById('share-result');
+
+            if (!shareCode || shareCode.length !== 8) {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Please enter an 8-character share code.';
+                return;
+            }
+
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = `Fetching share session for code: ${shareCode}...`;
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/shared_medical_history?share_code=eq.${shareCode}&select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log('Share response:', response);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ HTTP ${response.status}\n\n${errorText}\n\nPossible causes:\n1. RLS policy blocking access\n2. Invalid Supabase credentials\n3. Network issue`;
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('Share data:', data);
+
+                if (!data || data.length === 0) {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ SHARE NOT FOUND\n\nCode: ${shareCode}\n\nPossible causes:\n1. Wrong share code\n2. Share has expired\n3. Share was never created\n\nCheck Supabase database to verify the share exists.`;
+                    return;
+                }
+
+                currentShare = data[0];
+                const expiresAt = new Date(currentShare.expires_at);
+                const now = new Date();
+                const isExpired = expiresAt < now;
+
+                resultDiv.className = isExpired ? 'result error' : 'result success';
+                resultDiv.textContent = `${isExpired ? '⏰ EXPIRED' : '✅ FOUND'}\n\n` +
+                    `Share Code: ${currentShare.share_code}\n` +
+                    `Created: ${new Date(currentShare.created_at).toLocaleString()}\n` +
+                    `Expires: ${expiresAt.toLocaleString()}\n` +
+                    `Status: ${isExpired ? 'EXPIRED ❌' : 'ACTIVE ✅'}\n` +
+                    `Medical History IDs: ${currentShare.medical_history_ids.length}\n` +
+                    `IDs: ${JSON.stringify(currentShare.medical_history_ids, null, 2)}`;
+
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ ERROR\n\n${error.message}`;
+            }
+        }
+
+        async function testMedicalHistories() {
+            const resultDiv = document.getElementById('history-result');
+
+            if (!currentShare) {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Please test a share code first (Step 2).';
+                return;
+            }
+
+            if (!currentShare.medical_history_ids || currentShare.medical_history_ids.length === 0) {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ No medical history IDs in this share session.';
+                return;
+            }
+
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = `Fetching ${currentShare.medical_history_ids.length} medical histories...`;
+
+            try {
+                const historyIds = currentShare.medical_history_ids.join(',');
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/medical_history?id=in.(${historyIds})&select=*&order=event_date.desc`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log('History response:', response);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ HTTP ${response.status}\n\n${errorText}\n\nPossible causes:\n1. RLS policy blocking access to medical_history table\n2. Medical histories don't exist\n3. Invalid query`;
+                    return;
+                }
+
+                const histories = await response.json();
+                console.log('Histories:', histories);
+
+                if (!histories || histories.length === 0) {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ NO MEDICAL HISTORIES FOUND\n\nExpected: ${currentShare.medical_history_ids.length}\nFound: 0\n\nPossible causes:\n1. RLS policy blocking public read access\n2. Medical histories were deleted\n3. Wrong IDs in share session\n\nRUN THE RLS FIX SQL SCRIPT!`;
+                    return;
+                }
+
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ FOUND ${histories.length} MEDICAL HISTORIES\n\n` +
+                    histories.map((h, i) =>
+                        `--- History ${i + 1} ---\n` +
+                        `Event Type: ${h.event_type || 'N/A'}\n` +
+                        `Date: ${h.event_date ? new Date(h.event_date).toLocaleDateString() : 'N/A'}\n` +
+                        `Diagnosis: ${h.diagnosis || 'N/A'}\n` +
+                        `Treatment: ${h.treatment || 'N/A'}\n` +
+                        `Doctor: ${h.doctor_name || 'N/A'}\n` +
+                        `Hospital: ${h.hospital_name || 'N/A'}\n`
+                    ).join('\n');
+
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ ERROR\n\n${error.message}`;
+            }
+        }
+
+        async function testRLSPolicies() {
+            const resultDiv = document.getElementById('rls-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Testing RLS policies...';
+
+            try {
+                // Test 1: Can we read shared_medical_history table?
+                const shareTest = await fetch(`${SUPABASE_URL}/rest/v1/shared_medical_history?select=count&expires_at=gt.${new Date().toISOString()}`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+
+                // Test 2: Can we read medical_history table?
+                const historyTest = await fetch(`${SUPABASE_URL}/rest/v1/medical_history?select=count`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+
+                const results = {
+                    shared_medical_history: shareTest.status,
+                    medical_history: historyTest.status
+                };
+
+                const allPassed = Object.values(results).every(status => status === 200);
+
+                resultDiv.className = allPassed ? 'result success' : 'result error';
+                resultDiv.textContent =
+                    `${allPassed ? '✅' : '❌'} RLS POLICY TEST\n\n` +
+                    `shared_medical_history: ${results.shared_medical_history === 200 ? '✅ PASS' : '❌ FAIL (Status: ' + results.shared_medical_history + ')'}\n` +
+                    `medical_history: ${results.medical_history === 200 ? '✅ PASS' : '❌ FAIL (Status: ' + results.medical_history + ')'}\n\n` +
+                    (allPassed ?
+                        'All policies are working correctly!' :
+                        'Some policies are blocking access.\n\nRUN THE RLS FIX SQL SCRIPT from CRITICAL_FIXES.md!');
+
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ ERROR\n\n${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
