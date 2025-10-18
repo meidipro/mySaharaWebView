@@ -1019,17 +1019,29 @@ ${JSON.stringify(medicalData, null, 2)}`,
                 const aiResult = await response.json();
                 console.log('AI response:', aiResult);
 
-                if (aiResult.success && aiResult.message) {
+                // Handle both success/message and direct message response
+                let aiMessage = null;
+                if (aiResult.success === true && aiResult.message) {
+                    aiMessage = aiResult.message;
+                } else if (aiResult.success === false) {
+                    throw new Error(aiResult.error || 'AI service returned error');
+                } else if (typeof aiResult === 'string') {
+                    aiMessage = aiResult;
+                } else if (aiResult.message) {
+                    aiMessage = aiResult.message;
+                }
+
+                if (aiMessage) {
                     summaryDiv.innerHTML = `
                         <div class="ai-content">
-                            ${formatAISummary(aiResult.message)}
+                            ${formatAISummary(aiMessage)}
                             <p style="margin-top: 20px; font-size: 0.85em; color: #999; font-style: italic;">
                                 ⚠️ This AI-generated summary is for informational purposes only. Please review the complete medical records below.
                             </p>
                         </div>
                     `;
                 } else {
-                    throw new Error('Invalid AI response');
+                    throw new Error('Invalid AI response format');
                 }
 
             } catch (error) {
@@ -1106,15 +1118,22 @@ ${JSON.stringify(medicalData, null, 2)}`,
                     headers: {
                         'apikey': SUPABASE_ANON_KEY,
                         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
                     }
                 });
 
-                if (!response.ok) throw new Error('Failed to fetch document');
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Document fetch error:', response.status, errorText);
+                    throw new Error(`Failed to fetch document (${response.status})`);
+                }
 
                 const docs = await response.json();
+                console.log('Document query result:', docs);
+
                 if (!docs || docs.length === 0) {
-                    throw new Error('Document not found');
+                    throw new Error('Document not found in database. It may have been deleted or access is restricted.');
                 }
 
                 const doc = docs[0];
