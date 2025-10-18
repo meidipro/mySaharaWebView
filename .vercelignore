@@ -1,0 +1,28 @@
+# Vercel ignore file
+# These files won't be uploaded to Vercel
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+*.md
+
+# Netlify (if you have both configs)
+netlify.toml
+_redirects
+
+# Node modules (if any)
+node_modules/
+
+# Logs
+*.log

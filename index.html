@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mySahara - Shared Medical History</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            border-radius: 10px;
+            padding: 20px;
+            color: #c33;
+            text-align: center;
+        }
+
+        .error-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .history-list {
+            margin-top: 20px;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .history-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .history-date {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .history-description {
+            color: #666;
+            line-height: 1.6;
+            margin-top: 10px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            margin-right: 5px;
+            margin-top: 10px;
+        }
+
+        .expired-notice {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            color: #856404;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .success-icon {
+            font-size: 3em;
+            color: #4CAF50;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">🏥</div>
+            <h1>mySahara Health</h1>
+            <p class="subtitle">Secure Medical History Sharing</p>
+        </div>
+
+        <div id="content">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading medical history...</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🔒 This link is temporary and will expire in 10 minutes</p>
+            <p style="margin-top: 5px;">© 2025 mySahara Health - Secure & Private</p>
+        </div>
+    </div>
+
+    <script>
+        // Get share code from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const shareCode = urlParams.get('code');
+
+        // Supabase configuration - UPDATE THESE WITH YOUR VALUES
+        const SUPABASE_URL = 'https://fbnliqznxpdjhesctbmy.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZibmxpcXpueHBkamhlc2N0Ym15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxOTQ1NzYsImV4cCI6MjA3NTc3MDU3Nn0.PBxXxHBsYaUqXB9yw_7WyLKTnMGRJ7PO_LiMa92z3bw';
+
+        async function loadMedicalHistory() {
+            const contentDiv = document.getElementById('content');
+
+            if (!shareCode) {
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        <div class="error-icon">⚠️</div>
+                        <h3>Invalid Link</h3>
+                        <p>No share code provided in the URL.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                // Fetch share data
+                const shareResponse = await fetch(`${SUPABASE_URL}/rest/v1/shared_medical_history?share_code=eq.${shareCode}&select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+
+                if (!shareResponse.ok) {
+                    throw new Error('Failed to fetch share data');
+                }
+
+                const shareData = await shareResponse.json();
+
+                if (!shareData || shareData.length === 0) {
+                    contentDiv.innerHTML = `
+                        <div class="error">
+                            <div class="error-icon">🔍</div>
+                            <h3>Share Not Found</h3>
+                            <p>This link may have expired or is invalid.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const share = shareData[0];
+
+                // Check if expired
+                const expiresAt = new Date(share.expires_at);
+                const now = new Date();
+
+                if (expiresAt < now) {
+                    contentDiv.innerHTML = `
+                        <div class="error">
+                            <div class="error-icon">⏰</div>
+                            <h3>Link Expired</h3>
+                            <p>This share link has expired. Please request a new one from the patient.</p>
+                            <p style="margin-top: 10px; font-size: 0.9em;">Expired at: ${expiresAt.toLocaleString()}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Fetch medical histories
+                const historyIds = share.medical_history_ids.join(',');
+                const historyResponse = await fetch(`${SUPABASE_URL}/rest/v1/medical_history?id=in.(${historyIds})&select=*&order=event_date.desc`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+
+                if (!historyResponse.ok) {
+                    throw new Error('Failed to fetch medical history');
+                }
+
+                const histories = await historyResponse.json();
+
+                // Display medical histories
+                const timeRemaining = Math.round((expiresAt - now) / 60000);
+                let html = `
+                    <div class="success-icon">✅</div>
+                    <div class="expired-notice">
+                        ⏰ This link expires in ${timeRemaining} minute${timeRemaining !== 1 ? 's' : ''}
+                    </div>
+                    <h2 style="margin-bottom: 20px; color: #333;">Shared Medical Records (${histories.length})</h2>
+                    <div class="history-list">
+                `;
+
+                if (histories.length === 0) {
+                    html += '<p style="text-align: center; color: #999;">No medical records found.</p>';
+                } else {
+                    histories.forEach(history => {
+                        const eventDate = new Date(history.event_date).toLocaleDateString();
+                        html += `
+                            <div class="history-item">
+                                <div class="history-header">
+                                    <div class="history-title">${history.event_type || 'Medical Event'}</div>
+                                    <div class="history-date">📅 ${eventDate}</div>
+                                </div>
+                                ${history.diagnosis ? `<div class="history-description"><strong>Diagnosis:</strong> ${history.diagnosis}</div>` : ''}
+                                ${history.treatment ? `<div class="history-description"><strong>Treatment:</strong> ${history.treatment}</div>` : ''}
+                                ${history.notes ? `<div class="history-description"><strong>Notes:</strong> ${history.notes}</div>` : ''}
+                                ${history.doctor_name ? `<span class="tag">👨‍⚕️ Dr. ${history.doctor_name}</span>` : ''}
+                                ${history.hospital_name ? `<span class="tag">🏥 ${history.hospital_name}</span>` : ''}
+                            </div>
+                        `;
+                    });
+                }
+
+                html += '</div>';
+                contentDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error:', error);
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        <div class="error-icon">❌</div>
+                        <h3>Error Loading Data</h3>
+                        <p>Failed to load medical history. Please try again or contact support.</p>
+                        <p style="margin-top: 10px; font-size: 0.8em; color: #999;">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load data when page loads
+        loadMedicalHistory();
+    </script>
+</body>
+</html>
