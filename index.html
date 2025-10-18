@@ -1139,6 +1139,8 @@ ${JSON.stringify(medicalData, null, 2)}`,
 
                 const doc = docs[0];
                 console.log('Document details:', doc);
+                console.log('File URL:', doc.file_url);
+                console.log('Document Type:', doc.document_type);
                 let content = '';
 
                 // Display document based on type
@@ -1181,11 +1183,11 @@ ${JSON.stringify(medicalData, null, 2)}`,
                         }
                     }
 
-                    // Check if it's an image
-                    const isImage = (doc.document_type && doc.document_type.toLowerCase().includes('image')) ||
-                                   fileUrl.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i);
-
+                    // Detect file type from URL extension (NOT from document_type field which contains category like "test_report")
+                    const isImage = fileUrl.match(/\.(jpg|jpeg|png|gif|webp|bmp|jfif)$/i);
                     const isPDF = fileUrl.match(/\.pdf$/i);
+
+                    console.log('File type detection:', { isImage: !!isImage, isPDF: !!isPDF, fileUrl });
 
                     if (isImage) {
                         content = `
@@ -1202,22 +1204,14 @@ ${JSON.stringify(medicalData, null, 2)}`,
                             </iframe>
                         `;
                     } else {
-                        // Other file types
+                        // Other file types - Try to display as image first (many medical images might not have standard extensions)
                         content = `
-                            <div style="text-align: center; padding: 40px;">
-                                <div style="font-size: 4em; margin-bottom: 20px;">📄</div>
-                                <h3>${doc.title || 'Medical Document'}</h3>
-                                <p style="color: #666; margin: 15px 0;">Document Type: ${doc.document_type || 'Unknown'}</p>
-                                <p style="color: #999; font-size: 0.9em; margin-bottom: 20px;">
-                                    This document type may not display inline in the browser.
-                                </p>
-                                <a href="${fileUrl}"
-                                   target="_blank"
-                                   download
-                                   style="display: inline-block; background: #2196F3; color: white; padding: 12px 24px;
-                                          border-radius: 8px; text-decoration: none; margin-top: 15px;">
-                                    Download Document
-                                </a>
+                            <div id="document-container-${docId}">
+                                <img src="${fileUrl}"
+                                     class="modal-image"
+                                     alt="Medical Document"
+                                     style="max-width: 100%; height: auto;"
+                                     onerror="this.parentElement.innerHTML='<div style=\\'text-align:center;padding:40px;\\'><div style=\\'font-size:4em;margin-bottom:20px;\\'>📄</div><h3>${(doc.title || 'Medical Document').replace(/'/g, "\\'")}</h3><p style=\\'color:#666;margin:15px 0;\\'>Document Type: ${(doc.document_type || 'Unknown').replace(/'/g, "\\'")}</p><p style=\\'color:#999;font-size:0.9em;margin-bottom:20px;\\'>Could not display this document inline. Click below to view or download.</p><a href=\\'${fileUrl}\\' target=\\'_blank\\' download style=\\'display:inline-block;background:#2196F3;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin-top:15px;\\'>Open/Download Document</a></div>';">
                             </div>
                         `;
                     }
