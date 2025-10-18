@@ -1198,24 +1198,8 @@ ${JSON.stringify(medicalData, null, 2)}`,
                         content = `
                             <iframe src="${fileUrl}"
                                     style="width:100%; height:70vh; border:none; border-radius:10px;"
-                                    onerror="handlePDFError(this, '${fileUrl}', '${doc.title || 'PDF Document'}')">
+                                    onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'text-align:center;padding:40px;\\'><div style=\\'font-size:4em;margin-bottom:20px;\\'>📄</div><h3>${(doc.title || 'PDF Document').replace(/'/g, "\\'")}</h3><p style=\\'color:#666;margin:15px 0;\\'>Document Type: PDF</p><a href=\\'${fileUrl}\\' target=\\'_blank\\' style=\\'display:inline-block;background:#2196F3;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin-top:15px;\\'>Open PDF in New Tab</a></div>';">
                             </iframe>
-                            <script>
-                                function handlePDFError(iframe, url, title) {
-                                    iframe.style.display='none';
-                                    iframe.parentElement.innerHTML = \`
-                                        <div style="text-align:center;padding:40px;">
-                                            <div style="font-size:4em;margin-bottom:20px;">📄</div>
-                                            <h3>\${title}</h3>
-                                            <p style="color:#666;margin:15px 0;">Document Type: PDF</p>
-                                            <a href="\${url}" target="_blank"
-                                               style="display:inline-block;background:#2196F3;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin-top:15px;">
-                                                Open PDF in New Tab
-                                            </a>
-                                        </div>
-                                    \`;
-                                }
-                            </script>
                         `;
                     } else {
                         // Other file types
