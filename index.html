@@ -1271,6 +1271,37 @@ ${JSON.stringify(medicalData, null, 2)}`,
         }
 
         function displayFamilyHealthSection(familyMembers) {
+            // Process each family member's diseases
+            const familyMemberCards = familyMembers.map(member => {
+                const diseases = member.chronic_diseases.split(',').map(d => d.trim()).filter(d => d);
+
+                const diseaseCards = diseases.map(disease => {
+                    const isChronicKeyword = checkIfChronicDisease(disease);
+                    return `
+                        <div style="background: ${isChronicKeyword ? '#FFF5F5' : '#F8F9FA'}; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid ${isChronicKeyword ? '#FFE0E0' : '#E7F5FF'}; font-size: 0.8em;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #333; font-weight: 500;">${disease}</span>
+                                <span style="background: ${isChronicKeyword ? '#FFE0E0' : '#E7F5FF'}; color: ${isChronicKeyword ? '#E03131' : '#1971C2'}; padding: 2px 8px; border-radius: 10px; font-size: 0.85em; font-weight: 600;">
+                                    ${isChronicKeyword ? 'CHRONIC' : 'ACUTE'}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div style="background: white; padding: 14px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #FFE0E0; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                        <div style="font-weight: 600; color: #333; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                            <span style="background: #FF6B6B; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">
+                                ${member.relationship}
+                            </span>
+                            <span style="font-size: 0.95em;">${member.full_name}</span>
+                        </div>
+                        ${diseaseCards}
+                    </div>
+                `;
+            }).join('');
+
             const familyHTML = `
                 <div class="sidebar-card" style="border-left: 4px solid #FF6B6B; background: #FFF5F5;">
                     <h3 style="display: flex; align-items: center; gap: 10px;">
@@ -1281,25 +1312,14 @@ ${JSON.stringify(medicalData, null, 2)}`,
                             <span style="font-size: 1.2em;">⚠️</span> Genetic Risk Factors
                         </div>
                         <div style="font-size: 0.8em; color: #666;">
-                            Family members with chronic conditions:
+                            <strong>${familyMembers.length}</strong> family member(s) with chronic conditions identified
                         </div>
                     </div>
-                    ${familyMembers.map(member => `
-                        <div class="patient-info-item" style="display: block; padding: 12px; background: white; border-radius: 8px; margin-bottom: 10px; border: 1px solid #FFE0E0;">
-                            <div style="font-weight: 600; color: #333; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                                <span style="background: #FF6B6B; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em;">
-                                    ${member.relationship}
-                                </span>
-                                <span>${member.full_name}</span>
-                            </div>
-                            <div style="font-size: 0.85em; color: #E03131; line-height: 1.6; padding-left: 8px; border-left: 3px solid #FFE0E0; margin-top: 8px;">
-                                ${member.chronic_diseases}
-                            </div>
-                        </div>
-                    `).join('')}
-                    <div style="margin-top: 16px; padding: 12px; background: #E7F5FF; border-radius: 8px; border: 1px solid #D0EBFF;">
+                    ${familyMemberCards}
+                    <div style="margin-top: 12px; padding: 12px; background: #E7F5FF; border-radius: 8px; border: 1px solid #D0EBFF;">
                         <div style="font-size: 0.75em; color: #1971C2; line-height: 1.6;">
-                            <strong>💡 For Healthcare Provider:</strong> Consider genetic predisposition when making diagnosis and treatment decisions. Family history suggests potential hereditary risk factors.
+                            <strong>💡 For Healthcare Provider:</strong><br>
+                            Consider genetic predisposition when making diagnosis and treatment decisions. Family chronic disease history helps identify hereditary risk factors and potential preventive measures.
                         </div>
                     </div>
                 </div>
