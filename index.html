@@ -1180,7 +1180,16 @@ ${JSON.stringify(medicalData, null, 2)}`,
                 });
 
                 if (!userResponse.ok) {
+                    const errorText = await userResponse.text();
                     console.error('❌ Failed to fetch patient diseases:', userResponse.status);
+                    console.error('❌ Error details:', errorText);
+
+                    // Check if it's a column not found error
+                    if (errorText.includes('column') || errorText.includes('chronic_diseases')) {
+                        console.error('💡 SOLUTION: The chronic_diseases column does not exist in the users table!');
+                        console.error('💡 Please run this SQL in Supabase:');
+                        console.error('   ALTER TABLE users ADD COLUMN chronic_diseases TEXT;');
+                    }
                     return;
                 }
 
