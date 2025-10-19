@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Syntax Test</title>
+</head>
+<body>
+    <h1>Testing...</h1>
+    <div id="test"></div>
+
+    <script>
+        // Test the problematic code
+        const doc = { title: "Test Document" };
+        const fileUrl = "https://example.com/test.pdf";
+
+        const isPDF = true;
+
+        if (isPDF) {
+            const content = `
+                <iframe src="${fileUrl}"
+                        style="width:100%; height:70vh; border:none; border-radius:10px;"
+                        onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'text-align:center;padding:40px;\\'><div style=\\'font-size:4em;margin-bottom:20px;\\'>📄</div><h3>${(doc.title || 'PDF Document').replace(/'/g, "\\'")}</h3><p style=\\'color:#666;margin:15px 0;\\'>Document Type: PDF</p><a href=\\'${fileUrl}\\' target=\\'_blank\\' style=\\'display:inline-block;background:#2196F3;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin-top:15px;\\'>Open PDF in New Tab</a></div>';">
+                </iframe>
+            `;
+
+            document.getElementById('test').innerHTML = content;
+            console.log('Success! No syntax errors.');
+        }
+    </script>
+</body>
+</html>

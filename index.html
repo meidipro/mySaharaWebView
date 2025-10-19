@@ -2,7 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Open Graph / Social Media Preview -->
+    <meta property="og:title" content="Patient Medical History - mySahara Health">
+    <meta property="og:description" content="Secure access to patient medical records. This link expires in 10 minutes.">
+    <meta property="og:type" content="website">
+    <meta name="description" content="Secure medical history access for healthcare providers">
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+
     <title>Patient Medical History - mySahara Health</title>
     <style>
         * {
@@ -468,6 +481,22 @@
         .loading {
             text-align: center;
             padding: 60px 20px;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading h2 {
+            color: #2196F3;
+            margin-bottom: 10px;
+            font-size: 1.5em;
+        }
+
+        .loading p {
+            color: #666;
+            font-size: 1em;
         }
 
         .spinner {
@@ -616,8 +645,10 @@
     <div class="container">
         <div id="content">
             <div class="loading">
+                <h2>🏥 mySahara Health</h2>
                 <div class="spinner"></div>
                 <p>Loading patient medical history...</p>
+                <p style="font-size: 0.85em; color: #999; margin-top: 15px;">Secure • Temporary Access • Expires in 10 minutes</p>
             </div>
         </div>
     </div>
@@ -683,9 +714,14 @@
 
                 const share = shareData[0];
 
-                // Check expiration
+                // Check expiration - ensure we parse the UTC time correctly
                 const expiresAt = new Date(share.expires_at);
                 const now = new Date();
+
+                console.log('Share expires_at (raw):', share.expires_at);
+                console.log('Share expires_at (parsed):', expiresAt);
+                console.log('Current time:', now);
+                console.log('Time difference in minutes:', Math.round((expiresAt - now) / 60000));
 
                 if (expiresAt < now) {
                     showError('Link Expired', `This share link expired at ${expiresAt.toLocaleString()}. Please request a new one.`);
@@ -719,6 +755,9 @@
 
                 // Generate AI summary
                 generateAISummary(histories);
+
+                // Fetch and display family medical history
+                fetchAndDisplayFamilyHistory(share.user_id);
 
             } catch (error) {
                 console.error('Error:', error);
@@ -1089,6 +1128,188 @@ ${JSON.stringify(medicalData, null, 2)}`,
                     </ul>
                 </div>
             `;
+        }
+
+        async function fetchAndDisplayFamilyHistory(userId) {
+            try {
+                console.log('Fetching family members for user:', userId);
+
+                const familyResponse = await fetch(`${SUPABASE_URL}/rest/v1/family_members?user_id=eq.${userId}&select=full_name,relationship,chronic_diseases`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!familyResponse.ok) {
+                    console.error('Failed to fetch family members');
+                    return;
+                }
+
+                const familyMembers = await familyResponse.json();
+                console.log('Family members:', familyMembers);
+
+                // Filter to only members with chronic diseases
+                const familyWithDiseases = familyMembers.filter(f =>
+                    f.chronic_diseases && f.chronic_diseases.trim() !== ''
+                );
+
+                if (familyWithDiseases.length > 0) {
+                    displayFamilyHealthSection(familyWithDiseases);
+                }
+
+                // Also fetch patient's own diseases
+                fetchPatientDiseases(userId);
+            } catch (error) {
+                console.error('Error fetching family history:', error);
+                // Don't show error to user, just log it
+            }
+        }
+
+        async function fetchPatientDiseases(userId) {
+            try {
+                console.log('Fetching patient diseases for user:', userId);
+
+                const userResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=full_name,chronic_diseases`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!userResponse.ok) {
+                    console.error('Failed to fetch patient diseases');
+                    return;
+                }
+
+                const userData = await userResponse.json();
+                console.log('Patient data:', userData);
+
+                if (userData && userData.length > 0 && userData[0].chronic_diseases) {
+                    const diseases = userData[0].chronic_diseases.split(',').map(d => d.trim()).filter(d => d);
+                    if (diseases.length > 0) {
+                        displayPatientDiseases(userData[0].full_name, diseases);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching patient diseases:', error);
+            }
+        }
+
+        function displayPatientDiseases(patientName, diseases) {
+            const diseaseCards = diseases.map(disease => {
+                const isChronicKeyword = checkIfChronicDisease(disease);
+                const badge = isChronicKeyword ?
+                    `<span style="background: #FFE0E0; color: #E03131; padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">CHRONIC</span>` :
+                    `<span style="background: #E7F5FF; color: #1971C2; padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">ACUTE</span>`;
+
+                return `
+                    <div style="background: white; padding: 14px; border-radius: 10px; margin-bottom: 10px; border: 1px solid ${isChronicKeyword ? '#FFE0E0' : '#E7F5FF'}; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-weight: 600; color: #333; font-size: 0.95em;">${disease}</span>
+                            ${badge}
+                        </div>
+                        ${isChronicKeyword ? `
+                            <div style="font-size: 0.8em; color: #E03131; margin-top: 6px; padding: 8px; background: #FFF5F5; border-radius: 6px; border-left: 3px solid #E03131;">
+                                <strong>⚠️ Long-term condition</strong> - Requires ongoing management and monitoring
+                            </div>
+                        ` : `
+                            <div style="font-size: 0.8em; color: #1971C2; margin-top: 6px;">
+                                <strong>ℹ️ Temporary condition</strong> - Typically short-term or resolved
+                            </div>
+                        `}
+                    </div>
+                `;
+            }).join('');
+
+            const patientDiseasesHTML = `
+                <div class="sidebar-card" style="border-left: 4px solid #4CAF50; background: #F1F8F4;">
+                    <h3 style="display: flex; align-items: center; gap: 10px;">
+                        <span>💊</span> Patient Diseases
+                    </h3>
+                    <div style="font-size: 0.85em; color: #666; margin-bottom: 16px; padding: 10px; background: #E8F5E9; border-radius: 8px;">
+                        <strong>${diseases.length}</strong> disease(s) recorded for <strong>${patientName}</strong>
+                    </div>
+                    ${diseaseCards}
+                    <div style="margin-top: 12px; padding: 10px; background: #E7F5FF; border-radius: 8px; font-size: 0.75em; color: #1971C2; line-height: 1.6;">
+                        <strong>📋 For Healthcare Providers:</strong><br>
+                        Chronic conditions require long-term treatment plans. Please review patient's complete medical history for better diagnosis and treatment.
+                    </div>
+                </div>
+            `;
+
+            // Insert into sidebar (at the beginning)
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar) {
+                sidebar.insertAdjacentHTML('afterbegin', patientDiseasesHTML);
+            }
+        }
+
+        function checkIfChronicDisease(diseaseName) {
+            const chronicKeywords = [
+                'hypertension', 'high blood pressure', 'heart disease', 'coronary', 'cardiac', 'arrhythmia', 'heart failure', 'angina',
+                'diabetes', 'diabetic', 'type 1 diabetes', 'type 2 diabetes', 'thyroid', 'hyperthyroidism', 'hypothyroidism', 'goiter',
+                'asthma', 'copd', 'chronic obstructive pulmonary', 'bronchitis', 'emphysema',
+                'arthritis', 'rheumatoid', 'lupus', 'psoriasis', 'crohn', 'ulcerative colitis', 'multiple sclerosis',
+                'epilepsy', 'seizure', 'parkinson', 'alzheimer', 'dementia', 'migraine', 'chronic headache',
+                'kidney disease', 'renal', 'chronic kidney', 'kidney failure', 'nephritis',
+                'hepatitis', 'cirrhosis', 'liver disease', 'fatty liver', 'chronic liver',
+                'cancer', 'tumor', 'leukemia', 'lymphoma', 'carcinoma', 'sarcoma', 'melanoma',
+                'depression', 'anxiety', 'bipolar', 'schizophrenia', 'ocd', 'obsessive compulsive', 'ptsd',
+                'ibs', 'irritable bowel', 'gastritis', 'gerd', 'acid reflux', 'celiac',
+                'anemia', 'thalassemia', 'hemophilia', 'sickle cell',
+                'eczema', 'atopic dermatitis', 'chronic skin',
+                'glaucoma', 'macular degeneration', 'retinopathy',
+                'osteoporosis', 'osteoarthritis', 'fibromyalgia',
+                'chronic pain', 'chronic fatigue', 'autoimmune', 'hiv', 'aids', 'hepatitis b', 'hepatitis c', 'chronic'
+            ];
+
+            const lowerDisease = diseaseName.toLowerCase().trim();
+            return chronicKeywords.some(keyword => lowerDisease.includes(keyword));
+        }
+
+        function displayFamilyHealthSection(familyMembers) {
+            const familyHTML = `
+                <div class="sidebar-card" style="border-left: 4px solid #FF6B6B; background: #FFF5F5;">
+                    <h3 style="display: flex; align-items: center; gap: 10px;">
+                        <span>🧬</span> Family Health History
+                    </h3>
+                    <div style="background: #FFF0F0; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #FFE0E0;">
+                        <div style="font-size: 0.85em; color: #C92A2A; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 1.2em;">⚠️</span> Genetic Risk Factors
+                        </div>
+                        <div style="font-size: 0.8em; color: #666;">
+                            Family members with chronic conditions:
+                        </div>
+                    </div>
+                    ${familyMembers.map(member => `
+                        <div class="patient-info-item" style="display: block; padding: 12px; background: white; border-radius: 8px; margin-bottom: 10px; border: 1px solid #FFE0E0;">
+                            <div style="font-weight: 600; color: #333; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                                <span style="background: #FF6B6B; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75em;">
+                                    ${member.relationship}
+                                </span>
+                                <span>${member.full_name}</span>
+                            </div>
+                            <div style="font-size: 0.85em; color: #E03131; line-height: 1.6; padding-left: 8px; border-left: 3px solid #FFE0E0; margin-top: 8px;">
+                                ${member.chronic_diseases}
+                            </div>
+                        </div>
+                    `).join('')}
+                    <div style="margin-top: 16px; padding: 12px; background: #E7F5FF; border-radius: 8px; border: 1px solid #D0EBFF;">
+                        <div style="font-size: 0.75em; color: #1971C2; line-height: 1.6;">
+                            <strong>💡 For Healthcare Provider:</strong> Consider genetic predisposition when making diagnosis and treatment decisions. Family history suggests potential hereditary risk factors.
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Insert into sidebar
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar) {
+                sidebar.insertAdjacentHTML('beforeend', familyHTML);
+            }
         }
 
         function showError(title, message) {
