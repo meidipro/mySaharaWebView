@@ -1169,7 +1169,7 @@ ${JSON.stringify(medicalData, null, 2)}`,
 
         async function fetchPatientDiseases(userId) {
             try {
-                console.log('Fetching patient diseases for user:', userId);
+                console.log('🔍 Fetching patient diseases for user:', userId);
 
                 const userResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=full_name,chronic_diseases`, {
                     headers: {
@@ -1180,27 +1180,44 @@ ${JSON.stringify(medicalData, null, 2)}`,
                 });
 
                 if (!userResponse.ok) {
-                    console.error('Failed to fetch patient diseases');
+                    console.error('❌ Failed to fetch patient diseases:', userResponse.status);
                     return;
                 }
 
                 const userData = await userResponse.json();
-                console.log('Patient data:', userData);
+                console.log('✅ Patient data received:', userData);
 
-                if (userData && userData.length > 0 && userData[0].chronic_diseases) {
-                    const diseases = userData[0].chronic_diseases.split(',').map(d => d.trim()).filter(d => d);
-                    if (diseases.length > 0) {
-                        displayPatientDiseases(userData[0].full_name, diseases);
+                if (userData && userData.length > 0) {
+                    console.log('👤 Patient chronic_diseases field:', userData[0].chronic_diseases);
+
+                    if (userData[0].chronic_diseases) {
+                        const diseases = userData[0].chronic_diseases.split(',').map(d => d.trim()).filter(d => d);
+                        console.log('💊 Diseases parsed:', diseases);
+
+                        if (diseases.length > 0) {
+                            console.log('🎨 Calling displayPatientDiseases...');
+                            displayPatientDiseases(userData[0].full_name, diseases);
+                        } else {
+                            console.log('⚠️ No diseases found after parsing');
+                        }
+                    } else {
+                        console.log('⚠️ Patient has no chronic_diseases field populated');
                     }
+                } else {
+                    console.log('⚠️ No user data returned');
                 }
             } catch (error) {
-                console.error('Error fetching patient diseases:', error);
+                console.error('❌ Error fetching patient diseases:', error);
             }
         }
 
         function displayPatientDiseases(patientName, diseases) {
+            console.log('🎨 displayPatientDiseases called with:', patientName, diseases);
+
             const diseaseCards = diseases.map(disease => {
                 const isChronicKeyword = checkIfChronicDisease(disease);
+                console.log(`  Disease: "${disease}" -> Chronic: ${isChronicKeyword}`);
+
                 const badge = isChronicKeyword ?
                     `<span style="background: #FFE0E0; color: #E03131; padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">CHRONIC</span>` :
                     `<span style="background: #E7F5FF; color: #1971C2; padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">ACUTE</span>`;
@@ -1242,8 +1259,14 @@ ${JSON.stringify(medicalData, null, 2)}`,
 
             // Insert into sidebar (at the beginning)
             const sidebar = document.querySelector('.sidebar');
+            console.log('📍 Sidebar element found:', !!sidebar);
+
             if (sidebar) {
+                console.log('✅ Inserting patient diseases card into sidebar');
                 sidebar.insertAdjacentHTML('afterbegin', patientDiseasesHTML);
+                console.log('✅ Patient diseases card inserted successfully');
+            } else {
+                console.error('❌ Sidebar element not found! Cannot insert patient diseases card.');
             }
         }
 
@@ -1271,9 +1294,15 @@ ${JSON.stringify(medicalData, null, 2)}`,
         }
 
         function displayFamilyHealthSection(familyMembers) {
+            console.log('🧬 displayFamilyHealthSection called with:', familyMembers);
+
             // Process each family member's diseases
             const familyMemberCards = familyMembers.map(member => {
+                console.log(`  Family member: ${member.full_name} (${member.relationship})`);
+                console.log(`  Diseases: ${member.chronic_diseases}`);
+
                 const diseases = member.chronic_diseases.split(',').map(d => d.trim()).filter(d => d);
+                console.log(`  Parsed diseases:`, diseases);
 
                 const diseaseCards = diseases.map(disease => {
                     const isChronicKeyword = checkIfChronicDisease(disease);
@@ -1327,8 +1356,14 @@ ${JSON.stringify(medicalData, null, 2)}`,
 
             // Insert into sidebar
             const sidebar = document.querySelector('.sidebar');
+            console.log('📍 Sidebar element found for family:', !!sidebar);
+
             if (sidebar) {
+                console.log('✅ Inserting family health history card into sidebar');
                 sidebar.insertAdjacentHTML('beforeend', familyHTML);
+                console.log('✅ Family health history card inserted successfully');
+            } else {
+                console.error('❌ Sidebar element not found! Cannot insert family health history.');
             }
         }
 
