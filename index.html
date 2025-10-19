@@ -1132,7 +1132,7 @@ ${JSON.stringify(medicalData, null, 2)}`,
 
         async function fetchAndDisplayFamilyHistory(userId) {
             try {
-                console.log('Fetching family members for user:', userId);
+                console.log('🧬 Fetching family members for user:', userId);
 
                 const familyResponse = await fetch(`${SUPABASE_URL}/rest/v1/family_members?user_id=eq.${userId}&select=full_name,relationship,chronic_diseases`, {
                     headers: {
@@ -1143,20 +1143,41 @@ ${JSON.stringify(medicalData, null, 2)}`,
                 });
 
                 if (!familyResponse.ok) {
-                    console.error('Failed to fetch family members');
+                    const errorText = await familyResponse.text();
+                    console.error('❌ Failed to fetch family members:', familyResponse.status);
+                    console.error('❌ Error details:', errorText);
                     return;
                 }
 
                 const familyMembers = await familyResponse.json();
-                console.log('Family members:', familyMembers);
+                console.log('✅ Family members received:', familyMembers);
+                console.log('📊 Total family members:', familyMembers.length);
+
+                // Log each family member
+                familyMembers.forEach((member, index) => {
+                    console.log(`  👨‍👩‍👧‍👦 Family Member ${index + 1}:`, {
+                        name: member.full_name,
+                        relationship: member.relationship,
+                        diseases: member.chronic_diseases
+                    });
+                });
 
                 // Filter to only members with chronic diseases
                 const familyWithDiseases = familyMembers.filter(f =>
                     f.chronic_diseases && f.chronic_diseases.trim() !== ''
                 );
 
+                console.log('🏥 Family members with diseases:', familyWithDiseases.length);
+
                 if (familyWithDiseases.length > 0) {
+                    console.log('✅ Calling displayFamilyHealthSection...');
                     displayFamilyHealthSection(familyWithDiseases);
+                } else {
+                    console.log('⚠️ No family members with chronic diseases found');
+                    if (familyMembers.length > 0) {
+                        console.log('💡 You have family members, but they don\'t have diseases recorded');
+                        console.log('💡 Add diseases to family members in the Flutter app');
+                    }
                 }
 
                 // Also fetch patient's own diseases
