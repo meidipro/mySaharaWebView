@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Open Graph / Social Media Preview -->
+    <meta property="og:title" content="Patient Medical History - mySahara Health">
+    <meta property="og:description"
+        content="Secure access to patient medical records. This link expires in 10 minutes.">
+    <meta property="og:type" content="website">
+    <meta name="description" content="Secure medical history access for healthcare providers">
+    <div id="content">
+        <div class="loading">
+            <h2>🏥 mySahara Health</h2>
+            <div class="spinner"></div>
+            <p>Loading patient medical history...</p>
+            <p style="font-size: 0.85em; color: #999; margin-top: 15px;">Secure • Temporary Access • Expires in 10
+                minutes</p>
+        </div>
+    </div>
+    </div>
+
+    <!-- Document Viewer Modal -->
+    <div id="documentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Medical Document</h3>
+                <button class="modal-close" onclick="closeDocumentModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="modal-loading">
+                    <div class="spinner"></div>
+                    <p>Loading document...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const SUPABASE_URL = 'https://fbnliqznxpdjhesctbmy.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZibmxpcXpueHBkamhlc2N0Ym15Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxOTQ1NzYsImV4cCI6MjA3NTc3MDU3Nn0.PBxXxHBsYaUqXB9yw_7WyLKTnMGRJ7PO_LiMa92z3bw';
+        const BACKEND_URL = 'https://mysahara.onrender.com';
+
+        // Get share code from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const shareCode = urlParams.get('code');
+
+        let histories = [];
+
+        async function loadMedicalHistory() {
+            const contentDiv = document.getElementById('content');
+
+            if (!shareCode) {
+                showError('Invalid Link', 'No share code provided in the URL.');
+                return;
+            }
+
+            try {
+                console.log('Fetching share data for code:', shareCode);
+
+                // Fetch share session
+                const shareResponse = await fetch(`${SUPABASE_URL}/rest/v1/shared_medical_history?share_code=eq.${shareCode}&select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!shareResponse.ok) {
+                    throw new Error('Failed to fetch share data');
+                }
+
+                const shareData = await shareResponse.json();
+
+                if (!shareData || shareData.length === 0) {
+                    showError('Share Not Found', 'This link may have expired or is invalid.');
+                    return;
+                }
+
+                const share = shareData[0];
+
+                // Check expiration - ensure we parse the UTC time correctly
+                const expiresAt = new Date(share.expires_at);
+                const now = new Date();
+
+                console.log('Share expires_at (raw):', share.expires_at);
+                console.log('Share expires_at (parsed):', expiresAt);
+                console.log('Current time:', now);
+                console.log('Time difference in minutes:', Math.round((expiresAt - now) / 60000));
+
+                if (expiresAt < now) {
+                    showError('Link Expired', `This share link expired at ${expiresAt.toLocaleString()}. Please request a new one.`);
+                    return;
+                }
+
+                // Fetch medical histories
+                if (!share.medical_history_ids || share.medical_history_ids.length === 0) {
+                    showError('No Medical Records', 'This share session has no medical records.');
+                    return;
+                }
+
+                const historyIds = share.medical_history_ids.join(',');
+                const historyResponse = await fetch(`${SUPABASE_URL}/rest/v1/medical_history?id=in.(${historyIds})&select=*&order=event_date.desc`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!historyResponse.ok) {
+                    throw new Error('Failed to fetch medical history');
+                }
+
+                histories = await historyResponse.json();
+                console.log('Fetched histories:', histories);
+
+                // Display content
+                displayContent(share, histories, expiresAt, now);
+
+                // Generate AI summary
+                generateAISummary(histories);
+
+                // Fetch and display family medical history
+                fetchAndDisplayFamilyHistory(share.user_id);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Error Loading Data', error.message);
+            }
+        }
+
+        function displayContent(share, histories, expiresAt, now) {
+            const timeRemaining = Math.round((expiresAt - now) / 60000);
+            const totalEvents = histories.length;
+
+            const uniqueDoctors = [...new Set(histories.filter(h => h.doctor_name).map(h => h.doctor_name))].length;
+            const uniqueHospitals = [...new Set(histories.filter(h => h.hospital_name).map(h => h.hospital_name))].length;
+
+            let html = `
+                <div class="header">
+                    <div class="header-top">
+                        <div class="logo-section">
+                            <div class="logo">🏥</div>
+                            <div class="brand-info">
+                                <h1>mySahara Health</h1>
+                                <p>Comprehensive Medical History Report</p>
+                            </div>
+                        </div>
+                        <div class="expiry-badge">
+                            <span class="timer-icon">⏰</span>
+                            <div>
+                                <div style="font-weight: 600;">Access Expires In</div>
+                                <div style="font-size: 1.2em; font-weight: bold;">${timeRemaining} minutes</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Medical Events</div>
+                            <div class="stat-value">${totalEvents}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Healthcare Providers</div>
+                            <div class="stat-value">${uniqueDoctors}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Facilities Visited</div>
+                            <div class="stat-value">${uniqueHospitals}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Time Period</div>
+                            <div class="stat-value">${getTimePeriod(histories)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="main-content">
+                    <div>
+                        <!-- AI Summary -->
+                        <div class="ai-summary">
+                            <div class="ai-summary-header">
+                                <div class="ai-icon">🤖</div>
+                                <h2>AI-Generated Medical Summary</h2>
+                            </div>
+                            <div id="ai-summary-content">
+                                <div class="ai-loading">
+                                    <div class="ai-spinner"></div>
+                                    <div>Analyzing medical history and generating comprehensive summary...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Timeline -->
+                        <div class="timeline-section">
+                            <h2>📋 Medical Timeline</h2>
+                            <div class="timeline">
+                                ${histories.map((h, i) => createTimelineItem(h, i)).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sidebar">
+                        ${createQuickInsights(histories)}
+                        ${createPatientInfo(histories)}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('content').innerHTML = html;
+        }
+
+        function createTimelineItem(history, index) {
+            const date = history.event_date ? new Date(history.event_date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }) : 'Date not specified';
+
+            return `
+                <div class="timeline-item">
+                    <div class="event-header">
+                        <span class="event-type">${history.event_type || 'Medical Event'}</span>
+                        <span class="event-date">📅 ${date}</span>
+                    </div>
+
+                    ${history.diagnosis ? `<div class="event-title">${history.diagnosis}</div>` : ''}
+
+                    <div class="info-grid">
+                        ${history.diagnosis ? `
+                        <div class="info-row">
+                            <div class="info-label">Diagnosis:</div>
+                            <div class="info-value">${history.diagnosis}</div>
+                        </div>
+                        ` : ''}
+
+                        ${history.treatment ? `
+                        <div class="info-row">
+                            <div class="info-label">Treatment:</div>
+                            <div class="info-value">${history.treatment}</div>
+                        </div>
+                        ` : ''}
+
+                        ${history.medications ? `
+                        <div class="info-row">
+                            <div class="info-label">Medications:</div>
+                            <div class="info-value">${history.medications}</div>
+                        </div>
+                        ` : ''}
+
+                        ${history.symptoms ? `
+                        <div class="info-row">
+                            <div class="info-label">Symptoms:</div>
+                            <div class="info-value">${history.symptoms}</div>
+                        </div>
+                        ` : ''}
+
+                        ${history.test_results ? `
+                        <div class="info-row">
+                            <div class="info-label">Test Results:</div>
+                            <div class="info-value">${history.test_results}</div>
+                        </div>
+                        ` : ''}
+
+                        ${history.notes ? `
+                        <div class="info-row">
+                            <div class="info-label">Notes:</div>
+                            <div class="info-value">${history.notes}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <div>
+                        ${history.doctor_name ? `
+                        <span class="doctor-info">
+                            👨‍⚕️ Dr. ${history.doctor_name}
+                            ${history.doctor_specialty ? ` (${history.doctor_specialty})` : ''}
+                        </span>
+                        ` : ''}
+
+                        ${history.hospital_name ? `
+                        <span class="hospital-info">
+                            🏥 ${history.hospital_name}
+                            ${history.hospital_address ? ` - ${history.hospital_address}` : ''}
+                        </span>
+                        ` : ''}
+                    </div>
+
+                    ${history.document_ids && history.document_ids.length > 0 ? `
+                    <div class="documents-section">
+                        <div class="documents-header">
+                            📎 ${history.document_ids.length} Attached Document${history.document_ids.length > 1 ? 's' : ''}
+                        </div>
+                        <div class="documents-grid">
+                            ${history.document_ids.map(id => `
+                                <div class="document-card" onclick="event.preventDefault(); viewDocument('${id}'); return false;">
+                                    <div class="document-icon">📄</div>
+                                    <div class="document-type">Medical Document</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function createQuickInsights(histories) {
+            const conditions = [...new Set(histories.filter(h => h.diagnosis).map(h => h.diagnosis))];
+            const medications = [...new Set(histories.filter(h => h.medications).map(h => h.medications))];
+
+            return `
+                <div class="sidebar-card">
+                    <h3>💡 Quick Insights</h3>
+                    ${conditions.length > 0 ? `
+                    <div class="insight-item">
+                        <div class="insight-title">Diagnosed Conditions</div>
+                        <div class="insight-value">${conditions.join(', ')}</div>
+                    </div>
+                    ` : ''}
+
+                    ${medications.length > 0 ? `
+                    <div class="insight-item">
+                        <div class="insight-title">Medications</div>
+                        <div class="insight-value">${medications.slice(0, 3).join(', ')}</div>
+                    </div>
+                    ` : ''}
+
+                    <div class="insight-item">
+                        <div class="insight-title">Latest Visit</div>
+                        <div class="insight-value">${new Date(histories[0].event_date).toLocaleDateString()}</div>
+                    </div>
+
+                    <div class="insight-item">
+                        <div class="insight-title">Record Period</div>
+                        <div class="insight-value">${getTimePeriod(histories)}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createPatientInfo(histories) {
+            const totalEvents = histories.length;
+            const doctors = [...new Set(histories.filter(h => h.doctor_name).map(h => h.doctor_name))];
+
+            return `
+                <div class="sidebar-card">
+                    <h3>ℹ️ Record Information</h3>
+                    <div class="patient-info-item">
+                        <span class="patient-info-label">Total Events</span>
+                        <span class="patient-info-value">${totalEvents}</span>
+                    </div>
+                    <div class="patient-info-item">
+                        <span class="patient-info-label">Healthcare Providers</span>
+                        <span class="patient-info-value">${doctors.length}</span>
+                    </div>
+                    <div class="patient-info-item">
+                        <span class="patient-info-label">Shared On</span>
+                        <span class="patient-info-value">${new Date().toLocaleDateString()}</span>
+                    </div>
+                    <div class="patient-info-item">
+                        <span class="patient-info-label">Access Level</span>
+                        <span class="patient-info-value">Read-Only</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTimePeriod(histories) {
+            if (histories.length === 0) return 'N/A';
+
+            const dates = histories.map(h => new Date(h.event_date)).filter(d => !isNaN(d));
+            if (dates.length === 0) return 'N/A';
+
+            const oldest = new Date(Math.min(...dates));
+            const newest = new Date(Math.max(...dates));
+
+            const months = Math.round((newest - oldest) / (1000 * 60 * 60 * 24 * 30));
+            return months === 0 ? 'Recent' : `${months} months`;
+        }
+
+        async function generateAISummary(histories) {
+            const summaryDiv = document.getElementById('ai-summary-content');
+
+            try {
+                // Prepare medical history data for AI
+                const medicalData = histories.map(h => ({
+                    date: h.event_date,
+                    type: h.event_type,
+                    diagnosis: h.diagnosis,
+                    treatment: h.treatment,
+                    medications: h.medications,
+                    symptoms: h.symptoms,
+                    doctor: h.doctor_name
+                }));
+
+                console.log('Sending to AI:', medicalData);
+
+                // Call backend AI endpoint
+                const response = await fetch(`${BACKEND_URL}/api/ai/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: `Please analyze this patient's medical history and provide:
+1. A brief overview of their health journey
+2. Key findings and patterns
+3. Current health status
+4. Recommendations for the treating physician
+
+Medical History:
+${JSON.stringify(medicalData, null, 2)}`,
+                        language: 'en',
+                        use_medical_mode: true
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('AI service unavailable');
+                }
+
+                const aiResult = await response.json();
+                console.log('AI response:', aiResult);
+
+                // Handle both success/message and direct message response
+                let aiMessage = null;
+                if (aiResult.success === true && aiResult.message) {
+                    aiMessage = aiResult.message;
+                } else if (aiResult.success === false) {
+                    throw new Error(aiResult.error || 'AI service returned error');
+                } else if (typeof aiResult === 'string') {
+                    aiMessage = aiResult;
+                } else if (aiResult.message) {
+                    aiMessage = aiResult.message;
+                }
+
+                if (aiMessage) {
+                    summaryDiv.innerHTML = `
+                        <div class="ai-content">
+                            ${formatAISummary(aiMessage)}
+                            <p style="margin-top: 20px; font-size: 0.85em; color: #999; font-style: italic;">
+                                ⚠️ This AI-generated summary is for informational purposes only. Please review the complete medical records below.
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    throw new Error('Invalid AI response format');
+                }
+
+            } catch (error) {
+                console.error('AI Summary Error:', error);
+                // Show manual summary instead
+                summaryDiv.innerHTML = `
+                    <div class="ai-content">
+                        <p style="color: #666; margin-bottom: 20px; padding: 12px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                            ℹ️ AI-powered summary is currently unavailable. Here's an automated summary based on your medical records:
+                        </p>
+                        ${createManualSummary(histories)}
+                    </div>
+                `;
+            }
+        }
+
+        function formatAISummary(text) {
+            // Convert markdown-style text to HTML
+            let formatted = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+
+            return `<p>${formatted}</p>`;
+        }
+
+        function createManualSummary(histories) {
+            const conditions = [...new Set(histories.filter(h => h.diagnosis).map(h => h.diagnosis))];
+            const treatments = [...new Set(histories.filter(h => h.treatment).map(h => h.treatment))];
+
+            return `
+                <div class="key-findings">
+                    <h3>📊 Key Findings</h3>
+                    <ul>
+                        <li><strong>Total Medical Events:</strong> ${histories.length}</li>
+                        <li><strong>Conditions Diagnosed:</strong> ${conditions.join(', ') || 'None specified'}</li>
+                        <li><strong>Latest Event:</strong> ${new Date(histories[0].event_date).toLocaleDateString()}</li>
+                    </ul>
+                </div>
+
+                <div class="recommendations">
+                    <h3>💊 Treatments Administered</h3>
+                    <ul>
+                        ${treatments.slice(0, 3).map(t => `<li>${t}</li>`).join('') || '<li>No treatments specified</li>'}
+                    </ul>
+                </div>
+            `;
+        }
+
+        async function fetchAndDisplayFamilyHistory(userId) {
+            try {
+                console.log('🧬 Fetching family members for user:', userId);
+
+                const familyResponse = await fetch(`${SUPABASE_URL}/rest/v1/family_members?user_id=eq.${userId}&select=full_name,relationship,chronic_diseases`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!familyResponse.ok) {
+                    const errorText = await familyResponse.text();
+                    console.error('❌ Failed to fetch family members:', familyResponse.status);
+                    console.error('❌ Error details:', errorText);
+                    return;
+                }
+
+                const familyMembers = await familyResponse.json();
+                console.log('✅ Family members received:', familyMembers);
+                console.log('📊 Total family members:', familyMembers.length);
+
+                // Log each family member
+                familyMembers.forEach((member, index) => {
+                    console.log(`  👨‍👩‍👧‍👦 Family Member ${index + 1}:`, {
+                        name: member.full_name,
+                        relationship: member.relationship,
+                        diseases: member.chronic_diseases
+                    });
+                });
+
+                // Filter to only members with chronic diseases
+                const familyWithDiseases = familyMembers.filter(f =>
+                    f.chronic_diseases && f.chronic_diseases.trim() !== ''
+                );
+
+                console.log('🏥 Family members with diseases:', familyWithDiseases.length);
+
+                if (familyWithDiseases.length > 0) {
+                    console.log('✅ Calling displayFamilyHealthSection...');
+                    displayFamilyHealthSection(familyWithDiseases);
+                } else {
+                    console.log('⚠️ No family members with chronic diseases found');
+                    if (familyMembers.length > 0) {
+                        console.log('💡 You have family members, but they don\'t have diseases recorded');
+                        console.log('💡 Add diseases to family members in the Flutter app');
+                    }
+                }
+
+                // Also fetch patient's own diseases
+                fetchPatientDiseases(userId);
+            } catch (error) {
+                console.error('Error fetching family history:', error);
+                // Don't show error to user, just log it
+            }
+        }
+
+        async function fetchPatientDiseases(userId) {
+            try {
+                console.log('🔍 Fetching patient diseases for user:', userId);
+
+                const userResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=full_name,chronic_diseases`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!userResponse.ok) {
+                    const errorText = await userResponse.text();
+                    console.error('❌ Failed to fetch patient diseases:', userResponse.status);
+                    console.error('❌ Error details:', errorText);
+
+                    // Check if it's a column not found error
+                    if (errorText.includes('column') || errorText.includes('chronic_diseases')) {
+                        console.error('💡 SOLUTION: The chronic_diseases column does not exist in the users table!');
+                        console.error('💡 Please run this SQL in Supabase:');
+                        console.error('   ALTER TABLE users ADD COLUMN chronic_diseases TEXT;');
+                    }
+                    return;
+                }
+
+                const userData = await userResponse.json();
+                console.log('✅ Patient data received:', userData);
+
+                if (userData && userData.length > 0) {
+                    console.log('👤 Patient chronic_diseases field:', userData[0].chronic_diseases);
+
+                    if (userData[0].chronic_diseases) {
+                        const diseases = userData[0].chronic_diseases.split(',').map(d => d.trim()).filter(d => d);
+                        console.log('💊 Diseases parsed:', diseases);
+
+                        if (diseases.length > 0) {
+                            console.log('🎨 Calling displayPatientDiseases...');
+                            displayPatientDiseases(userData[0].full_name, diseases);
+                        } else {
+                            console.log('⚠️ No diseases found after parsing');
+                        }
+                    } else {
+                        console.log('⚠️ Patient has no chronic_diseases field populated');
+                    }
+                } else {
+                    console.log('⚠️ No user data returned');
+                }
+            } catch (error) {
+                console.error('❌ Error fetching patient diseases:', error);
+            }
+        }
+
+        function displayPatientDiseases(patientName, diseases) {
+            console.log('🎨 displayPatientDiseases called with:', patientName, diseases);
+
+            const diseaseCards = diseases.map(disease => {
+                const isChronicKeyword = checkIfChronicDisease(disease);
+                console.log(`  Disease: "${disease}" -> Chronic: ${isChronicKeyword}`);
+
+                const badge = isChronicKeyword ?
+                    `<span style="background: #FFE0E0; color: #E03131; padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">CHRONIC</span>` :
+                    `<span style="background: #E0F2F1; color: #00695C; padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">ACUTE</span>`;
+
+                return `
+                    <div style="background: white; padding: 14px; border-radius: 10px; margin-bottom: 10px; border: 1px solid ${isChronicKeyword ? '#FFE0E0' : '#B2DFDB'}; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-weight: 600; color: #333; font-size: 0.95em;">${disease}</span>
+                            ${badge}
+                        </div>
+                        ${isChronicKeyword ? `
+                            <div style="font-size: 0.8em; color: #E03131; margin-top: 6px; padding: 8px; background: #FFF5F5; border-radius: 6px; border-left: 3px solid #E03131;">
+                                <strong>⚠️ Long-term condition</strong> - Requires ongoing management and monitoring
+                            </div>
+                        ` : `
+                            <div style="font-size: 0.8em; color: #00695C; margin-top: 6px;">
+                                <strong>ℹ️ Temporary condition</strong> - Typically short-term or resolved
+                            </div>
+                        `}
+                    </div>
+                `;
+            }).join('');
+
+            const patientDiseasesHTML = `
+                <div class="sidebar-card" style="border-left: 4px solid #4CAF50; background: #F1F8F4;">
+                    <h3 style="display: flex; align-items: center; gap: 10px;">
+                        <span>💊</span> Patient Diseases
+                    </h3>
+                    <div style="font-size: 0.85em; color: #666; margin-bottom: 16px; padding: 10px; background: #E8F5E9; border-radius: 8px;">
+                        <strong>${diseases.length}</strong> disease(s) recorded for <strong>${patientName}</strong>
+                    </div>
+                    ${diseaseCards}
+                    <div style="margin-top: 12px; padding: 10px; background: #E0F2F1; border-radius: 8px; font-size: 0.75em; color: #00695C; line-height: 1.6;">
+                        <strong>📋 For Healthcare Providers:</strong><br>
+                        Chronic conditions require long-term treatment plans. Please review patient's complete medical history for better diagnosis and treatment.
+                    </div>
+                </div>
+            `;
+
+            // Insert into sidebar (at the beginning)
+            const sidebar = document.querySelector('.sidebar');
+            console.log('📍 Sidebar element found:', !!sidebar);
+
+            if (sidebar) {
+                console.log('✅ Inserting patient diseases card into sidebar');
+                sidebar.insertAdjacentHTML('afterbegin', patientDiseasesHTML);
+                console.log('✅ Patient diseases card inserted successfully');
+            } else {
+                console.error('❌ Sidebar element not found! Cannot insert patient diseases card.');
+            }
+        }
+
+        function checkIfChronicDisease(diseaseName) {
+            const chronicKeywords = [
+                'hypertension', 'high blood pressure', 'heart disease', 'coronary', 'cardiac', 'arrhythmia', 'heart failure', 'angina',
+                'diabetes', 'diabetic', 'type 1 diabetes', 'type 2 diabetes', 'thyroid', 'hyperthyroidism', 'hypothyroidism', 'goiter',
+                'asthma', 'copd', 'chronic obstructive pulmonary', 'bronchitis', 'emphysema',
+                'arthritis', 'rheumatoid', 'lupus', 'psoriasis', 'crohn', 'ulcerative colitis', 'multiple sclerosis',
+                'epilepsy', 'seizure', 'parkinson', 'alzheimer', 'dementia', 'migraine', 'chronic headache',
+                'kidney disease', 'renal', 'chronic kidney', 'kidney failure', 'nephritis',
+                'hepatitis', 'cirrhosis', 'liver disease', 'fatty liver', 'chronic liver',
+                'cancer', 'tumor', 'leukemia', 'lymphoma', 'carcinoma', 'sarcoma', 'melanoma',
+                'depression', 'anxiety', 'bipolar', 'schizophrenia', 'ocd', 'obsessive compulsive', 'ptsd',
+                'ibs', 'irritable bowel', 'gastritis', 'gerd', 'acid reflux', 'celiac',
+                'anemia', 'thalassemia', 'hemophilia', 'sickle cell',
+                'eczema', 'atopic dermatitis', 'chronic skin',
+                'glaucoma', 'macular degeneration', 'retinopathy',
+                'osteoporosis', 'osteoarthritis', 'fibromyalgia',
+                'chronic pain', 'chronic fatigue', 'autoimmune', 'hiv', 'aids', 'hepatitis b', 'hepatitis c', 'chronic'
+            ];
+
+            const lowerDisease = diseaseName.toLowerCase().trim();
+            return chronicKeywords.some(keyword => lowerDisease.includes(keyword));
+        }
+
+        function displayFamilyHealthSection(familyMembers) {
+            console.log('🧬 displayFamilyHealthSection called with:', familyMembers);
+
+            // Process each family member's diseases
+            const familyMemberCards = familyMembers.map(member => {
+                console.log(`  Family member: ${member.full_name} (${member.relationship})`);
+                console.log(`  Diseases: ${member.chronic_diseases}`);
+
+                const diseases = member.chronic_diseases.split(',').map(d => d.trim()).filter(d => d);
+                console.log(`  Parsed diseases:`, diseases);
+
+                const diseaseCards = diseases.map(disease => {
+                    const isChronicKeyword = checkIfChronicDisease(disease);
+                    return `
+                        <div style="background: ${isChronicKeyword ? '#FFF5F5' : '#F8F9FA'}; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; border: 1px solid ${isChronicKeyword ? '#FFE0E0' : '#E7F5FF'}; font-size: 0.8em;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="color: #333; font-weight: 500;">${disease}</span>
+                                <span style="background: ${isChronicKeyword ? '#FFE0E0' : '#E0F2F1'}; color: ${isChronicKeyword ? '#E03131' : '#00695C'}; padding: 2px 8px; border-radius: 10px; font-size: 0.85em; font-weight: 600;">
+                                    ${isChronicKeyword ? 'CHRONIC' : 'ACUTE'}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div style="background: white; padding: 14px; border-radius: 10px; margin-bottom: 12px; border: 1px solid #FFE0E0; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                        <div style="font-weight: 600; color: #333; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                            <span style="background: #FF6B6B; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.75em; font-weight: 600;">
+                                ${member.relationship}
+                            </span>
+                            <span style="font-size: 0.95em;">${member.full_name}</span>
+                        </div>
+                        ${diseaseCards}
+                    </div>
+                `;
+            }).join('');
+
+            const familyHTML = `
+                <div class="sidebar-card" style="border-left: 4px solid #FF6B6B; background: #FFF5F5;">
+                    <h3 style="display: flex; align-items: center; gap: 10px;">
+                        <span>🧬</span> Family Health History
+                    </h3>
+                    <div style="background: #FFF0F0; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #FFE0E0;">
+                        <div style="font-size: 0.85em; color: #C92A2A; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                            <span style="font-size: 1.2em;">⚠️</span> Genetic Risk Factors
+                        </div>
+                        <div style="font-size: 0.8em; color: #666;">
+                            <strong>${familyMembers.length}</strong> family member(s) with chronic conditions identified
+                        </div>
+                    </div>
+                    ${familyMemberCards}
+                    <div style="margin-top: 12px; padding: 12px; background: #E0F2F1; border-radius: 8px; border: 1px solid #B2DFDB;">
+                        <div style="font-size: 0.75em; color: #00695C; line-height: 1.6;">
+                            <strong>💡 For Healthcare Provider:</strong><br>
+                            Consider genetic predisposition when making diagnosis and treatment decisions. Family chronic disease history helps identify hereditary risk factors and potential preventive measures.
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Insert into sidebar
+            const sidebar = document.querySelector('.sidebar');
+            console.log('📍 Sidebar element found for family:', !!sidebar);
+
+            if (sidebar) {
+                console.log('✅ Inserting family health history card into sidebar');
+                sidebar.insertAdjacentHTML('beforeend', familyHTML);
+                console.log('✅ Family health history card inserted successfully');
+            } else {
+                console.error('❌ Sidebar element not found! Cannot insert family health history.');
+            }
+        }
+
+        function showError(title, message) {
+            document.getElementById('content').innerHTML = `
+                <div class="error">
+                    <div class="error-icon">⚠️</div>
+                    <h3>${title}</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        async function viewDocument(docId) {
+            const modal = document.getElementById('documentModal');
+            const modalBody = document.getElementById('modalBody');
+
+            modal.style.display = 'block';
+            modalBody.innerHTML = `
+                <div class="modal-loading">
+                    <div class="spinner"></div>
+                    <p>Loading document...</p>
+                </div>
+            `;
+
+            try {
+                // Fetch document details from Supabase
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/medical_documents?id=eq.${docId}&select=*`, {
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Document fetch error:', response.status, errorText);
+                    throw new Error(`Failed to fetch document (${response.status})`);
+                }
+
+                const docs = await response.json();
+                console.log('Document query result:', docs);
+
+                if (!docs || docs.length === 0) {
+                    throw new Error('Document not found in database.');
+                }
+
+                const doc = docs[0];
+                console.log('Document details:', doc);
+                console.log('File URL:', doc.file_url);
+                console.log('Document Type:', doc.document_type);
+                let content = '';
+
+                // Display document based on type
+                if (doc.file_url) {
+                    let fileUrl = doc.file_url;
+
+                    // Try to generate signed URL if bucket is private
+                    const urlMatch = doc.file_url.match(/storage\/v1\/object\/(public|sign)\/([^\/]+)\/(.+)/);
+                    if (urlMatch) {
+                        const bucketName = urlMatch[2];
+                        const filePath = urlMatch[3];
+
+                        console.log('Attempting to generate signed URL for:', bucketName, filePath);
+
+                        try {
+                            const signedUrlResponse = await fetch(
+                                `${SUPABASE_URL}/storage/v1/object/sign/${bucketName}/${filePath}`,
+                                {
+                                    method: 'POST',
+                                    headers: {
+                                        'apikey': SUPABASE_ANON_KEY,
+                                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ expiresIn: 3600 })
+                                }
+                            );
+
+                            if (signedUrlResponse.ok) {
+                                const signedData = await signedUrlResponse.json();
+                                if (signedData.signedURL) {
+                                    fileUrl = `${SUPABASE_URL}/storage/v1${signedData.signedURL}`;
+                                    console.log('Generated signed URL successfully');
+                                }
+                            } else {
+                                console.log('Could not generate signed URL, using original URL');
+                            }
+                        } catch (signError) {
+                            console.warn('Signed URL generation failed, using original URL:', signError);
+                        }
+                    }
+
+                    // Detect file type from URL extension (NOT from document_type field which contains category like "test_report")
+                    const isImage = fileUrl.match(/\.(jpg|jpeg|png|gif|webp|bmp|jfif)$/i);
+                    const isPDF = fileUrl.match(/\.pdf$/i);
+
+                    console.log('File type detection:', { isImage: !!isImage, isPDF: !!isPDF, fileUrl });
+
+                    if (isImage) {
+                        content = `
+                            <img src="${fileUrl}"
+                                 class="modal-image"
+                                 alt="Medical Document"
+                                 onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\'text-align:center;padding:40px;\\'><div style=\\'font-size:3em;margin-bottom:15px;\\'>⚠️</div><h3>Failed to Load Image</h3><p style=\\'color:#666;\\'>The image could not be loaded. The file may not be accessible.</p><a href=\\'${fileUrl}\\' target=\\'_blank\\' style=\\'display:inline-block;background:#2196F3;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin-top:15px;\\'>Try Opening in New Tab</a></div>';">
+                        `;
+                    } else if (isPDF) {
+                        content = `
+                            <iframe src="${fileUrl}"
+                                    style="width:100%; height:70vh; border:none; border-radius:10px;"
+                                    onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'text-align:center;padding:40px;\\'><div style=\\'font-size:4em;margin-bottom:20px;\\'>📄</div><h3>${(doc.title || 'PDF Document').replace(/'/g, "\\'")}</h3><p style=\\'color:#666;margin:15px 0;\\'>Document Type: PDF</p><a href=\\'${fileUrl}\\' target=\\'_blank\\' style=\\'display:inline-block;background:#2196F3;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin-top:15px;\\'>Open PDF in New Tab</a></div>';">
+                            </iframe>
+                        `;
+                    } else {
+                        // Other file types - Try to display as image first (many medical images might not have standard extensions)
+                        content = `
+                            <div id="document-container-${docId}">
+                                <img src="${fileUrl}"
+                                     class="modal-image"
+                                     alt="Medical Document"
+                                     style="max-width: 100%; height: auto;"
+                                     onerror="this.parentElement.innerHTML='<div style=\\'text-align:center;padding:40px;\\'><div style=\\'font-size:4em;margin-bottom:20px;\\'>📄</div><h3>${(doc.title || 'Medical Document').replace(/'/g, "\\'")}</h3><p style=\\'color:#666;margin:15px 0;\\'>Document Type: ${(doc.document_type || 'Unknown').replace(/'/g, "\\'")}</p><p style=\\'color:#999;font-size:0.9em;margin-bottom:20px;\\'>Could not display this document inline. Click below to view or download.</p><a href=\\'${fileUrl}\\' target=\\'_blank\\' download style=\\'display:inline-block;background:#2196F3;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin-top:15px;\\'>Open/Download Document</a></div>';">
+                            </div>
+                        `;
+                    }
+                } else if (doc.extracted_text) {
+                    // Show extracted text
+                    content = `
+                        <div style="padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                            <h3 style="color: #00897B; margin-bottom: 15px;">📄 ${doc.title || 'Document Content'}</h3>
+                            <p style="white-space: pre-wrap; line-height: 1.8; color: #555;">${doc.extracted_text}</p>
+                        </div>
+                    `;
+                } else {
+                    content = `
+                        <div style="text-align: center; padding: 40px; color: #999;">
+                            <div style="font-size: 3em; margin-bottom: 15px;">📋</div>
+                            <p>No document content available</p>
+                            <p style="font-size: 0.9em; margin-top: 10px;">
+                                This document may not have been uploaded or has been removed.
+                            </p>
+                        </div>
+                    `;
+                }
+
+                modalBody.innerHTML = content;
+
+            } catch (error) {
+                console.error('Error loading document:', error);
+                modalBody.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #E53935;">
+                        <div style="font-size: 3em; margin-bottom: 15px;">⚠️</div>
+                        <h3>Error Loading Document</h3>
+                        <p>${error.message}</p>
+                        <p style="font-size: 0.9em; color: #666; margin-top: 15px;">
+                            <strong>Troubleshooting:</strong><br>
+                            • Check that the Supabase Storage bucket is public<br>
+                            • Verify the document exists in the database<br>
+                            • Check browser console for detailed errors
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        function closeDocumentModal() {
+            document.getElementById('documentModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function (event) {
+            const modal = document.getElementById('documentModal');
+            if (event.target === modal) {
+                closeDocumentModal();
+            }
+        }
+
+        // Load data on page load
+        loadMedicalHistory();
+    </script>
+    </body>
+
+</html>
