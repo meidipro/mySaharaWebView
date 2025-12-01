@@ -860,6 +860,15 @@
             `;
         }
 
+        function getDiseasesList(diseases) {
+            if (!diseases) return [];
+            if (Array.isArray(diseases)) return diseases;
+            if (typeof diseases === 'string') {
+                return diseases.split(',').map(d => d.trim()).filter(d => d.length > 0);
+            }
+            return [];
+        }
+
         function createPatientInfo(histories) {
             const totalEvents = histories.length;
             const doctors = [...new Set(histories.filter(h => h.doctor_name).map(h => h.doctor_name))];
@@ -887,28 +896,31 @@
             `;
 
             // Add chronic diseases if available
-            if (userProfile && userProfile.chronic_diseases && userProfile.chronic_diseases.length > 0) {
-                html += `
-                    <div class="sidebar-card">
-                        <h3>🏥 Chronic Diseases</h3>
-                        ${userProfile.chronic_diseases.map(disease => `
-                            <div class="insight-item">
-                                <div class="insight-value" style="color: var(--primary); font-weight: 600;">• ${disease}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
+            if (userProfile && userProfile.chronic_diseases) {
+                const diseases = getDiseasesList(userProfile.chronic_diseases);
+                if (diseases.length > 0) {
+                    html += `
+                        <div class="sidebar-card">
+                            <h3>🏥 Chronic Diseases</h3>
+                            ${diseases.map(disease => `
+                                <div class="insight-item">
+                                    <div class="insight-value" style="color: var(--primary); font-weight: 600;">• ${disease}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
             }
 
             // Add family health history if available
             if (familyHealthHistory && familyHealthHistory.length > 0) {
                 const familyDiseases = familyHealthHistory
-                    .filter(member => member.chronic_diseases && member.chronic_diseases.length > 0)
                     .map(member => ({
                         name: member.full_name || member.relationship,
                         relationship: member.relationship,
-                        diseases: member.chronic_diseases
-                    }));
+                        diseases: getDiseasesList(member.chronic_diseases)
+                    }))
+                    .filter(member => member.diseases.length > 0);
 
                 if (familyDiseases.length > 0) {
                     html += `
