@@ -1042,7 +1042,10 @@
                         const url = doc.file_url;
                         const fileExtension = url.split('.').pop().split(/[#?]/)[0].toLowerCase();
                         const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(fileExtension);
-                        const isDoc = ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt'].includes(fileExtension);
+
+                        // Debug info
+                        console.log('File URL:', url);
+                        console.log('Detected Extension:', fileExtension);
 
                         if (isImage) {
                             content += `
@@ -1050,20 +1053,16 @@
                                     <img src="${url}" style="max-width: 100%; max-height: 500px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" alt="Document Preview">
                                 </div>
                             `;
-                        } else if (isDoc) {
-                            // Use Google Docs Viewer for PDFs and Office documents to prevent auto-download
+                        } else {
+                            // Default to Google Docs Viewer for all other file types (PDF, Doc, or unknown)
+                            // This prevents auto-download loops while attempting to preview everything
                             const encodedUrl = encodeURIComponent(url);
                             content += `
                                 <div style="margin-bottom: 20px; text-align: center; background: #f5f5f5; padding: 10px; border-radius: 8px;">
                                     <iframe src="https://docs.google.com/viewer?url=${encodedUrl}&embedded=true" style="width: 100%; height: 600px; border: none; border-radius: 4px;" title="Document Preview"></iframe>
                                 </div>
-                            `;
-                        } else {
-                            // Fallback for unknown types
-                            content += `
-                                <div style="text-align: center; padding: 40px; color: #999;">
-                                    <div style="font-size: 3em; margin-bottom: 15px;">📁</div>
-                                    <p>Preview not available for this file type.</p>
+                                <div style="font-size: 0.8em; color: #ccc; text-align: center; margin-bottom: 10px;">
+                                    Type: ${fileExtension || 'unknown'}
                                 </div>
                             `;
                         }
@@ -1072,7 +1071,7 @@
                         content += `
                             <div style="margin-bottom: 20px; text-align: center;">
                                 <a href="${url}" target="_blank" class="generate-btn" style="text-decoration: none; display: inline-block;">
-                                    ${isImage || isDoc ? 'Open in New Tab ↗' : 'Download File ⬇️'}
+                                    ${isImage ? 'Open in New Tab ↗' : 'Download File ⬇️'}
                                 </a>
                             </div>
                         `;
